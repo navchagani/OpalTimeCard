@@ -27,7 +27,7 @@ class _UserScreenState extends State<UserScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    'Texas E Cigrate Inc',
+                    'Texas E Cigrates Inc',
                     style: TextStyle(fontSize: 50, color: Color(0xff390E82)),
                   ),
                   const SizedBox(height: 20),
