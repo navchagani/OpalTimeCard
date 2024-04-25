@@ -6,7 +6,7 @@ import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 class AuthService {
   Future<Map<String, dynamic>> loginUser(String email, String password) async {
     final body = {
-      'username': email,
+      'email': email,
       'password': password,
     };
 

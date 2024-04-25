@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/Admin/Services/loginService.dart';
 import 'package:opaltimecard/User/UserScreen.dart';
 import 'package:opaltimecard/Utils/button.dart';
