@@ -73,7 +73,7 @@ class _CalculatorState extends State<Calculator> {
 
     return SizedBox(
       height: height > 800 ? height / 1.85 : height / 1.5,
-      width: height > 900 ? width / 1.85 : width / 3.5,
+      width: width > 900 ? width / 3.85 : width / 1.5,
       child: Material(
         clipBehavior: Clip.hardEdge,
         borderRadius: BorderRadius.circular(20.0),
@@ -111,7 +111,7 @@ class _CalculatorState extends State<Calculator> {
                     pinContentAlignment: Alignment.center,
                     focusNode: pinFocusNode,
                     defaultPinTheme: PinTheme(
-                      width: height > 800 ? width / 7 : width / 20,
+                      width: width > 800 ? width / 20 : width / 9,
                       height: height > 800 ? height / 15 : height / 12,
                       textStyle: const TextStyle(
                         fontSize: 40,

@@ -2,6 +2,8 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/Admin/Services/loginService.dart';
 import 'package:opaltimecard/User/UserScreen.dart';
@@ -9,6 +11,7 @@ import 'package:opaltimecard/Utils/button.dart';
 import 'package:opaltimecard/Utils/customDailoge.dart';
 
 import 'package:opaltimecard/Utils/inputFeild.dart';
+import 'package:opaltimecard/bloc/Blocs.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -31,7 +34,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     super.initState();
   }
 
-  void loginUser() async {
+  void loginUser({required BuildContext context}) async {
     String email = emailaddress.text;
     String pass = password.text;
 
@@ -41,6 +44,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
       if (response['success'] == true) {
         LoggedInUser loggedInUser = LoggedInUser.fromJson(response['data']);
+
+        UserBloc userBloc = BlocProvider.of<UserBloc>(context);
+        userBloc.add(loggedInUser);
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const UserScreen()),
@@ -191,7 +198,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         CustomButton(
                           title: "Login",
                           buttonSize: 200,
-                          onTap: () => loginUser(),
+                          onTap: () => loginUser(context: context),
                         )
                       ],
                     ),
