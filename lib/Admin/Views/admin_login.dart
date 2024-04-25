@@ -1,7 +1,11 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:opaltimecard/Admin/Services/loginService.dart';
+import 'package:opaltimecard/User/UserScreen.dart';
 import 'package:opaltimecard/Utils/button.dart';
+import 'package:opaltimecard/Utils/customDailoge.dart';
 
 import 'package:opaltimecard/Utils/inputFeild.dart';
 
@@ -26,11 +30,29 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     super.initState();
   }
 
-  // onInit() async{
-  //   try{
-  //     final LoggedInUser data = await _authService.loginUser(context, email, password,);
-  //   }
-  // }
+  void loginUser() async {
+    String email = emailaddress.text;
+    String pass = password.text;
+
+    try {
+      final Map<String, dynamic> response =
+          await _authService.loginUser(email, pass);
+
+      if (response['success'] == true) {
+        LoggedInUser loggedInUser = LoggedInUser.fromJson(response['data']);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const UserScreen()),
+        );
+      } else {
+        ConstDialog(context).showErrorDialog(error: response['error']['info']);
+      }
+    } catch (e) {
+      ConstDialog(context).showErrorDialog(error: 'An error occurred: $e');
+      log("catch error: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
@@ -60,8 +82,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     color: Color(0XFF390E82),
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 40),
-            const CustomInputField(
-                labelText: '', hintText: "Enter Email Address"),
+            CustomInputField(
+                controller: emailaddress,
+                labelText: '',
+                hintText: "Enter Email Address"),
             const SizedBox(height: 10),
             CustomInputField(
               controller: password,
@@ -134,7 +158,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                               fontWeight: FontWeight.bold,
                             )),
                         const SizedBox(height: 60),
-                        const CustomInputField(
+                        CustomInputField(
+                            controller: emailaddress,
                             labelText: 'Email Address ',
                             hintText: "Enter Email Address"),
                         const SizedBox(
@@ -162,9 +187,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         const SizedBox(
                           height: 50,
                         ),
-                        const CustomButton(
+                        CustomButton(
                           title: "Login",
                           buttonSize: 200,
+                          onTap: () => loginUser(),
                         )
                       ],
                     ),
