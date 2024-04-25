@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:opaltimecard/Admin/Views/admin_login.dart';
 import 'package:opaltimecard/User/UserScreen.dart';
 
 void main() {
