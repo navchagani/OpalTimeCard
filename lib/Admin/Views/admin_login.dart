@@ -26,7 +26,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
   TextEditingController emailaddress = TextEditingController();
   TextEditingController password = TextEditingController();
-
   @override
   void initState() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky,
@@ -64,6 +63,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
+    double height = MediaQuery.of(context).size.height;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -75,9 +75,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   }
 
   Widget smallScreenLayout() {
+    double screenWidth = MediaQuery.of(context).size.width;
+
+    double buttonWidth = screenWidth;
+
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(15.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -92,7 +96,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             const SizedBox(height: 40),
             CustomInputField(
                 controller: emailaddress,
-                labelText: '',
+                labelText: 'Email Address ',
                 hintText: "Enter Email Address"),
             const SizedBox(height: 10),
             CustomInputField(
@@ -113,11 +117,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Expanded(
-              child: CustomButton(
-                title: "Login",
-              ),
-            ),
+            CustomButton(
+              title: "Login",
+              // buttonSize: 200,
+              onTap: () => loginUser(context: context),
+            )
           ],
         ),
       ),

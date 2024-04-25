@@ -66,6 +66,20 @@ class _UserScreenState extends State<UserScreen> {
           )
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          onPressed: () {},
+          child: IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.power_settings_new_rounded,
+                  color: Colors.deepOrange))),
     );
+  }
+
+  logout() {
+    return AlertDialog(
+        // title: "",
+        );
   }
 }
