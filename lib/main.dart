@@ -25,4 +25,5 @@ class MyApp extends StatelessWidget {
 
 final listProviders = [
   BlocProvider(create: (context) => UserBloc()),
+  BlocProvider(create: (context) => EmployeeBloc()),
 ];

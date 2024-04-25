@@ -1,4 +1,12 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:opaltimecard/User/Modal/usermodal.dart';
+import 'package:opaltimecard/User/Services/userService.dart';
+import 'package:opaltimecard/Utils/customDailoge.dart';
+import 'package:opaltimecard/bloc/Blocs.dart';
 import 'package:pinput/pinput.dart';
 
 class Calculator extends StatefulWidget {
@@ -10,6 +18,7 @@ class Calculator extends StatefulWidget {
 
 class _CalculatorState extends State<Calculator> {
   TextEditingController pinCode = TextEditingController();
+  UserService userService = UserService();
 
   String text = '';
   FocusNode pinFocusNode = FocusNode();
@@ -37,6 +46,34 @@ class _CalculatorState extends State<Calculator> {
       }
       pinCode.text = text;
     });
+  }
+
+  void employeeAttendance({required BuildContext context}) async {
+    try {
+      final Map<String, dynamic> response =
+          await userService.UserAttendance((pinCode.text));
+
+      if (response['success'] == true) {
+        EmployeeModel employeeModel = EmployeeModel.fromJson(response['data']);
+
+        EmployeeBloc employeeBloc = BlocProvider.of<EmployeeBloc>(context);
+        employeeBloc.add(employeeModel);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => employeeCard()),
+        );
+      } else {
+        ConstDialog(context).showErrorDialog(error: response['error']['info']);
+      }
+    } catch (e) {
+      ConstDialog(context).showErrorDialog(error: 'An error occurred: $e');
+      log("catch error: $e");
+    }
+  }
+
+  employeeCard() {
+    return Dialog();
   }
 
   Widget calcButton(String btntxt, Color btncolor, Color txtcolor) {
@@ -127,6 +164,8 @@ class _CalculatorState extends State<Calculator> {
                     keyboardType: TextInputType.number,
                     obscureText: true,
                     readOnly: true,
+                    onCompleted: (value) =>
+                        employeeAttendance(context: context),
                   ),
                 ),
               ),

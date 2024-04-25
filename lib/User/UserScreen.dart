@@ -67,47 +67,50 @@ class _UserScreenState extends State<UserScreen> {
     emailaddress.text = userBloc.state!.email!;
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 29, 29, 29),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Texas E Cigrates Inc',
-                      style: TextStyle(
-                          fontSize: width > 600 ? 30 : 20,
-                          color: const Color.fromARGB(255, 177, 149, 226),
-                          fontWeight: FontWeight.w900),
-                    ),
-                    Text(
-                      Time,
-                      style: const TextStyle(
-                          fontSize: 50,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white),
-                    ),
-                    Text(
-                      Date,
-                      style: TextStyle(
-                          fontSize: width > 600 ? 30 : 20, color: Colors.white),
-                    ),
-                    SizedBox(
-                      height: height > 768 ? height / 20 : height / 30,
-                    ),
-                    const Calculator()
-                  ],
-                )
-              ],
-            )
-          ],
+      body: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Texas E Cigrates Inc',
+                        style: TextStyle(
+                            fontSize: width > 600 ? 30 : 20,
+                            color: const Color.fromARGB(255, 177, 149, 226),
+                            fontWeight: FontWeight.w900),
+                      ),
+                      Text(
+                        Time,
+                        style: const TextStyle(
+                            fontSize: 50,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white),
+                      ),
+                      Text(
+                        Date,
+                        style: TextStyle(
+                            fontSize: width > 600 ? 30 : 20,
+                            color: Colors.white),
+                      ),
+                      SizedBox(
+                        height: height > 768 ? height / 20 : height / 30,
+                      ),
+                      const Calculator()
+                    ],
+                  )
+                ],
+              )
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -120,16 +123,8 @@ class _UserScreenState extends State<UserScreen> {
                   return logout();
                 });
           },
-          child: IconButton(
-              onPressed: () {
-                showDialog(
-                    context: context,
-                    builder: (context) {
-                      return logout();
-                    });
-              },
-              icon: const Icon(Icons.power_settings_new_rounded,
-                  color: Colors.deepOrange))),
+          child: const Icon(Icons.power_settings_new_rounded,
+              color: Colors.deepOrange)),
     );
   }
 

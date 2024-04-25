@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:opaltimecard/User/Modal/usermodal.dart';
 
 class UserService {
-  Future<Map<String, dynamic>> UserAttendance(int pin) async {
+  Future<Map<String, dynamic>> UserAttendance(String pin) async {
     final body = {'pin': pin};
 
     try {
