@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
+import 'package:opaltimecard/Admin/Services/loginService.dart';
 import 'package:opaltimecard/Utils/button.dart';
 
 import 'package:opaltimecard/Utils/inputFeild.dart';
@@ -12,9 +15,23 @@ class AdminLoginScreen extends StatefulWidget {
 
 class _AdminLoginScreenState extends State<AdminLoginScreen> {
   bool _isObscure = true;
+  final AuthService _authService = AuthService();
 
   TextEditingController emailaddress = TextEditingController();
   TextEditingController password = TextEditingController();
+
+  @override
+  void initState() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky,
+        overlays: [SystemUiOverlay.bottom]);
+    super.initState();
+  }
+
+  // onInit() async{
+  //   try{
+  //     final LoggedInUser data = await _authService.loginUser(context, email, password,);
+  //   }
+  // }
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;

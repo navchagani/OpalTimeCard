@@ -1,38 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:pinput/pinput.dart';
 
 class Calculator extends StatefulWidget {
-  const Calculator({super.key});
+  const Calculator({Key? key}) : super(key: key);
 
   @override
   State<Calculator> createState() => _CalculatorState();
 }
 
 class _CalculatorState extends State<Calculator> {
-  dynamic text = '';
-  final bool _isObscure = true;
+  TextEditingController pinCode = TextEditingController();
 
-  void calculation(btnText) {
-    setState(() {
-      if (btnText == 'AC') {
-        text = '';
-      } else if (btnText == '<') {
-        if (text.length > 1) {
-          text = text.substring(0, text.length - 1);
-        } else {
-          text = '';
-        }
-      } else {
-        if (text == '') {
-          text = btnText;
-        } else {
-          text = text + btnText;
-        }
+  String text = '';
+  FocusNode pinFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    pinFocusNode.addListener(() {
+      if (!pinFocusNode.hasFocus) {
+        pinCode.clear();
       }
     });
   }
 
+  void calculation(btnText) {
+    setState(() {
+      if (btnText == 'C') {
+        text = '';
+      } else if (btnText == '<') {
+        if (text.isNotEmpty) {
+          text = text.substring(0, text.length - 1);
+        }
+      } else if (text.length < 4) {
+        text += btnText;
+      }
+      pinCode.text = text;
+    });
+  }
+
   Widget calcButton(String btntxt, Color btncolor, Color txtcolor) {
-    return Container(
+    double width = MediaQuery.of(context).size.width;
+    double height = MediaQuery.of(context).size.height;
+
+    return SizedBox(
       child: ElevatedButton(
         onPressed: () {
           calculation(btntxt);
@@ -40,7 +51,9 @@ class _CalculatorState extends State<Calculator> {
         style: ElevatedButton.styleFrom(
           shape: const CircleBorder(),
           backgroundColor: btncolor,
-          padding: const EdgeInsets.all(15),
+          padding: EdgeInsets.all(
+            height > 800 ? width / 20 : width / 50,
+          ),
         ),
         child: Text(
           btntxt,
@@ -53,32 +66,31 @@ class _CalculatorState extends State<Calculator> {
     );
   }
 
-  String obscureText(String text) {
-    return '*' * text.length;
-  }
-
   @override
   Widget build(BuildContext context) {
-    String obscuredText = obscureText(text);
+    double width = MediaQuery.of(context).size.width;
+    double height = MediaQuery.of(context).size.height;
 
     return SizedBox(
-      height: 600,
-      width: 400,
-      child: Card(
-        elevation: 4,
-        child: Container(
-          padding: const EdgeInsets.all(15),
+      height: height > 800 ? height / 1.85 : height / 1.4,
+      width: height > 900 ? width / 1.85 : width / 1.2,
+      child: Material(
+        clipBehavior: Clip.hardEdge,
+        borderRadius: BorderRadius.circular(20.0),
+        elevation: 80,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15),
           child: Column(
             children: [
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Padding(
                     padding: EdgeInsets.all(10.0),
                     child: Text(
                       'Enter Your 4-digit No',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: width > 600 ? 20 : 12,
                         fontWeight: FontWeight.bold,
                       ),
                       textAlign: TextAlign.start,
@@ -86,25 +98,39 @@ class _CalculatorState extends State<Calculator> {
                   ),
                 ],
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(
-                        top: 50, bottom: 40, left: 30, right: 40),
-                    child: Text(
-                      obscuredText,
-                      // "$text",
-                      textAlign: TextAlign.left,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 50,
+              GestureDetector(
+                onTap: () {
+                  FocusScope.of(context).requestFocus(pinFocusNode);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Pinput(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    controller: pinCode,
+                    pinContentAlignment: Alignment.center,
+                    focusNode: pinFocusNode,
+                    defaultPinTheme: PinTheme(
+                      width: height > 800 ? width / 7 : width / 20,
+                      height: height > 800 ? height / 15 : height / 12,
+                      textStyle: const TextStyle(
+                        fontSize: 40,
+                        color: Color.fromRGBO(30, 60, 87, 1),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: const Color.fromARGB(255, 35, 36, 36)),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                     ),
+                    keyboardType: TextInputType.number,
+                    obscureText: true,
+                    readOnly: true,
                   ),
-                ],
+                ),
               ),
-              const SizedBox(height: 10),
+              // const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -131,11 +157,11 @@ class _CalculatorState extends State<Calculator> {
                   calcButton('3', Colors.grey[850]!, Colors.white),
                 ],
               ),
-              const SizedBox(height: 10),
+              // const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  calcButton('AC', Colors.grey, Colors.black),
+                  calcButton('C', Colors.grey, Colors.black),
                   calcButton('0', Colors.grey[850]!, Colors.white),
                   calcButton('<', Colors.grey, Colors.black),
                 ],

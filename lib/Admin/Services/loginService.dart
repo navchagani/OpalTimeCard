@@ -9,7 +9,7 @@ import 'package:opaltimecard/Utils/customDailoge.dart';
 
 class AuthService {
   Future<Map<String, dynamic>> loginUser(
-      BuildContext context, String email, String password, String url) async {
+      BuildContext context, String email, String password) async {
     final body = {
       'username': email,
       'password': password,
