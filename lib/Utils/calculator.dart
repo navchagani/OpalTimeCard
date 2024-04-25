@@ -72,8 +72,8 @@ class _CalculatorState extends State<Calculator> {
     double height = MediaQuery.of(context).size.height;
 
     return SizedBox(
-      height: height > 800 ? height / 1.85 : height / 1.4,
-      width: height > 900 ? width / 1.85 : width / 1.2,
+      height: height > 800 ? height / 1.85 : height / 1.5,
+      width: height > 900 ? width / 1.85 : width / 3.5,
       child: Material(
         clipBehavior: Clip.hardEdge,
         borderRadius: BorderRadius.circular(20.0),
