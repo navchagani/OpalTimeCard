@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:opaltimecard/User/Modal/usermodal.dart';
 
 class UserService {
-  Future<Map<String, dynamic>> UserAttendance(String pin) async {
+  Future<Map<String, dynamic>> userAttendance(String pin) async {
     final body = {'pin': pin};
 
     try {
@@ -22,27 +22,27 @@ class UserService {
               EmployeeModel.fromJson(responseBody['data']);
 
           Map<String, dynamic> map = employeeModel.toJson();
+          log("${employeeModel.toJson()}");
+
           return {'success': true, 'data': map};
         } else {
-          return {
-            'success': false,
-            'error': responseBody['error'] ?? 'Unknown error'
-          };
+          // Better error handling when the operation was not successful
+          final error = responseBody['error'] ??
+              responseBody['data']['error'] ??
+              'Unknown error';
+          return {'success': false, 'error': error};
         }
       } else {
-        log('wrong password');
+        log('Wrong password or other HTTP error');
         final Map<String, dynamic> responseBody = json.decode(response.body);
-        return {
-          'success': false,
-          'error': responseBody['error'] ?? 'Network error'
-        };
+        final error = responseBody['error'] ??
+            responseBody['data']['error'] ??
+            'Network error';
+        return {'success': false, 'error': error};
       }
     } catch (e) {
-      log('print Error');
-      return {
-        'success': false,
-        'error': 'Network error: $e',
-      };
+      log('Network error: $e');
+      return {'success': false, 'error': 'Exception caught: $e'};
     }
   }
 }

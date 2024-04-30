@@ -1,46 +1,66 @@
 import 'package:flutter/material.dart';
 
-class CustomButton extends StatefulWidget {
-  final double? buttonSize;
+class CustomButton extends StatelessWidget {
+  final String text;
   final Function()? onTap;
-  final String title;
-  final Color? color;
+  final double? elevation, radius;
+  final Color? backgroundColor, textColor;
+  final IconData? iconData;
+  final bool? isLoading, enabled;
+
   const CustomButton(
       {super.key,
+      required this.text,
       this.onTap,
-      required this.title,
-      this.color,
-      this.buttonSize});
+      this.elevation,
+      this.backgroundColor,
+      this.textColor,
+      this.radius,
+      this.iconData,
+      this.isLoading,
+      this.enabled});
 
-  @override
-  State<CustomButton> createState() => _CustomButtonState();
-}
-
-class _CustomButtonState extends State<CustomButton> {
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double buttonWidth = widget.buttonSize ?? screenWidth;
-    return GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          width: buttonWidth,
-          padding: const EdgeInsets.only(top: 10, bottom: 10),
-          margin: const EdgeInsets.only(left: 3, right: 3),
-          decoration: BoxDecoration(
-            color: widget.color ?? const Color(0xff390E82),
-            borderRadius: BorderRadius.circular(8),
+    return Material(
+      elevation: enabled ?? false ? 10.0 : elevation ?? 0.0,
+      borderRadius: radius == null ? BorderRadius.circular(10.0) : null,
+      color: enabled ?? true
+          ? isLoading ?? false
+              ? null
+              : backgroundColor ?? Color.fromARGB(255, 37, 84, 124)
+          : Colors.grey.shade800,
+      clipBehavior: Clip.hardEdge,
+      child: InkWell(
+        onTap: enabled ?? true ? onTap : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 15.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              isLoading ?? false
+                  ? const SizedBox(
+                      width: 25,
+                      height: 25,
+                      child: CircularProgressIndicator(),
+                    )
+                  : iconData != null
+                      ? Icon(iconData)
+                      : Container(),
+              if (iconData != null)
+                const SizedBox(
+                  width: 5,
+                ),
+              if (isLoading == false)
+                Center(
+                    child: Text(
+                  text,
+                  style: TextStyle(color: textColor ?? Colors.white),
+                )),
+            ],
           ),
-          child: Center(
-            child: Text(
-              widget.title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ));
+        ),
+      ),
+    );
   }
 }

@@ -23,6 +23,7 @@ class AuthService {
         if (responseBody['success'] == true) {
           LoggedInUser loggedInUser =
               LoggedInUser.fromJson(responseBody['data']);
+          log('loggedinUSer: ${loggedInUser.toJson()}');
 
           Map<String, dynamic> map = loggedInUser.toJson();
           log('store url success');

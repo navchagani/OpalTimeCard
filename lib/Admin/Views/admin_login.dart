@@ -1,14 +1,17 @@
+// ignore_for_file: use_build_context_synchronously
+
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/Admin/Services/loginService.dart';
-import 'package:opaltimecard/User/UserScreen.dart';
+import 'package:opaltimecard/User/Views/UserScreen.dart';
 import 'package:opaltimecard/Utils/button.dart';
 import 'package:opaltimecard/Utils/customDailoge.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:opaltimecard/Utils/inputFeild.dart';
 import 'package:opaltimecard/bloc/Blocs.dart';
@@ -22,6 +25,7 @@ class AdminLoginScreen extends StatefulWidget {
 
 class _AdminLoginScreenState extends State<AdminLoginScreen> {
   bool _isObscure = true;
+  bool loggingIn = false;
   final AuthService _authService = AuthService();
 
   TextEditingController emailaddress = TextEditingController();
@@ -37,6 +41,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     String email = emailaddress.text;
     String pass = password.text;
 
+    setState(() {
+      loggingIn = true;
+    });
+
     try {
       final Map<String, dynamic> response =
           await _authService.loginUser(email, pass);
@@ -46,6 +54,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
         UserBloc userBloc = BlocProvider.of<UserBloc>(context);
         userBloc.add(loggedInUser);
+
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String userJson = jsonEncode(loggedInUser.toJson());
+        prefs.setString('loggedInUser', userJson);
+        prefs.setString('email', email);
+        prefs.setString('password', pass);
+        log("Saving user data: $userJson");
 
         Navigator.pushReplacement(
           context,
@@ -57,18 +72,22 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     } catch (e) {
       ConstDialog(context).showErrorDialog(error: 'An error occurred: $e');
       log("catch error: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          loggingIn = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
-    double height = MediaQuery.of(context).size.height;
-
     return LayoutBuilder(
       builder: (context, constraints) {
         return Scaffold(
-          body: width > 600 ? bigScreenLayout() : smallScreenLayout(),
+          body: width > 900 ? bigScreenLayout() : smallScreenLayout(),
         );
       },
     );
@@ -76,53 +95,52 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
   Widget smallScreenLayout() {
     double screenWidth = MediaQuery.of(context).size.width;
-
-    double buttonWidth = screenWidth;
-
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Image.asset('assets/images/login_img.png', width: 250, height: 250),
-            const SizedBox(height: 20),
-            const Text("Sign In",
-                style: TextStyle(
-                    fontSize: 24,
-                    color: Color(0XFF390E82),
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 40),
-            CustomInputField(
-                controller: emailaddress,
-                labelText: 'Email Address ',
-                hintText: "Enter Email Address"),
-            const SizedBox(height: 10),
-            CustomInputField(
-              controller: password,
-              labelText: '',
-              hintText: 'Enter Your Password',
-              toHide: _isObscure,
-              icon: InkWell(
-                onTap: () {
-                  setState(() {
-                    _isObscure = !_isObscure;
-                  });
-                },
-                child: Icon(
-                  _isObscure ? Icons.visibility : Icons.visibility_off,
-                  color: Colors.grey,
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(screenWidth > 700 ? 200 : 30),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/login_img.png',
+                width: screenWidth >= 600 ? 400 : 250,
+                height: screenWidth >= 600 ? 400 : 250,
+              ),
+              const SizedBox(height: 20),
+              Text("Sign In",
+                  style: TextStyle(
+                      fontSize: screenWidth >= 600 ? 35 : 25,
+                      color: const Color.fromARGB(255, 37, 84, 124),
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 40),
+              CustomInputField(
+                  controller: emailaddress,
+                  labelText: 'Email Address ',
+                  hintText: "Enter Email Address"),
+              const SizedBox(height: 10),
+              CustomInputField(
+                controller: password,
+                labelText: '',
+                hintText: 'Enter Your Password',
+                toHide: _isObscure,
+                icon: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isObscure = !_isObscure;
+                    });
+                  },
+                  child: Icon(
+                    _isObscure ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            CustomButton(
-              title: "Login",
-              // buttonSize: 200,
-              onTap: () => loginUser(context: context),
-            )
-          ],
+              const SizedBox(height: 20),
+              loginButton(),
+            ],
+          ),
         ),
       ),
     );
@@ -166,7 +184,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         const Text("Sign In",
                             style: TextStyle(
                               fontSize: 40,
-                              color: Color(0XFF390E82),
+                              color: Color.fromARGB(255, 37, 84, 124),
                               fontWeight: FontWeight.bold,
                             )),
                         const SizedBox(height: 60),
@@ -197,13 +215,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                           ),
                         ),
                         const SizedBox(
-                          height: 50,
+                          height: 30,
                         ),
-                        CustomButton(
-                          title: "Login",
-                          buttonSize: 200,
-                          onTap: () => loginUser(context: context),
-                        )
+                        loginButton()
                       ],
                     ),
                   ),
@@ -213,6 +227,17 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget loginButton() {
+    return CustomButton(
+      text: "Login",
+      // buttonSize: 200,
+      isLoading: loggingIn,
+      backgroundColor: const Color.fromARGB(255, 37, 84, 124),
+      textColor: Colors.white,
+      onTap: () => loginUser(context: context),
     );
   }
 }
