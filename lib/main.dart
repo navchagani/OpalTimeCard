@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opaltimecard/Admin/Views/admin_login.dart';
 import 'package:opaltimecard/User/Views/UserScreen.dart';
+import 'package:opaltimecard/Utils/qr.dart';
 
 import 'package:opaltimecard/bloc/Blocs.dart';
+import 'package:opaltimecard/localDatabase/localDatabase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await LocalDatabaseInit.initialize();
   WidgetsFlutterBinding.ensureInitialized();
   SharedPreferences prefs = await SharedPreferences.getInstance();
   String? email = prefs.getString('email');

@@ -2,13 +2,15 @@
 
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
+import 'package:opaltimecard/User/Services/userService.dart';
 import 'package:opaltimecard/User/Views/logoutDailog.dart';
 import 'package:opaltimecard/Utils/calculator.dart';
-import 'package:opaltimecard/Utils/qr.dart';
+import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserScreen extends StatefulWidget {
@@ -21,11 +23,55 @@ class UserScreen extends StatefulWidget {
 class _UserScreenState extends State<UserScreen> {
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
+  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
+  Barcode? result;
+  QRViewController? controller;
+  UserService userService = UserService();
+  bool attendance = false;
+
   String UserLocation = '';
   late SharedPreferences _prefs;
   bool loggingIn = false;
   LoggedInUser? currentUser;
   bool toggle = true;
+  @override
+  void reassemble() {
+    super.reassemble();
+    if (Platform.isAndroid) {
+      controller!.pauseCamera();
+    } else if (Platform.isIOS) {
+      controller!.resumeCamera();
+    }
+  }
+
+  void _onQRViewCreated(QRViewController qrController) {
+    controller = qrController;
+    qrController.scannedDataStream.listen((scanData) {
+      if (result == null) {
+        setState(() {
+          result = scanData;
+        });
+        toggle = !toggle;
+        userService.userAttendance(context, result!.code.toString()).then((_) {
+          log("Attendance recorded successfully for QR code: ${result!.code}");
+        }).catchError((error) {
+          log("Error recording attendance: $error");
+        }).whenComplete(() {
+          Future.delayed(const Duration(seconds: 5), () {
+            setState(() {
+              result = null;
+            });
+          });
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    controller?.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -56,10 +102,6 @@ class _UserScreenState extends State<UserScreen> {
     }
   }
 
-  Widget pinDailog() {
-    return const Calculator();
-  }
-
   Widget qrCodeDailog() {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
@@ -68,8 +110,19 @@ class _UserScreenState extends State<UserScreen> {
       child: Container(
         height: height > 800 ? height / 1.85 : height / 1.55,
         width: width > 900 ? width / 3.85 : width / 1.5,
-        decoration: BoxDecoration(
-            color: Colors.white, borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
+        child: QRView(
+          key: qrKey,
+          onQRViewCreated: _onQRViewCreated,
+          cameraFacing: CameraFacing.front,
+          overlay: QrScannerOverlayShape(
+            borderColor: Colors.red,
+            borderRadius: 10,
+            borderLength: 30,
+            borderWidth: 10,
+            cutOutSize: width > 900 ? 300 : 350,
+          ),
+        ),
       ),
     );
   }
@@ -77,15 +130,15 @@ class _UserScreenState extends State<UserScreen> {
   userAttendance() {
     double width = MediaQuery.of(context).size.width;
     if (width > 900) {
-      return const Row(
+      return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          QRCodeScanner(),
-          SizedBox(
+          qrCodeDailog(),
+          const SizedBox(
             width: 20,
           ),
-          Calculator(),
+          const Calculator(),
         ],
       );
     } else {
@@ -96,16 +149,25 @@ class _UserScreenState extends State<UserScreen> {
             transitionBuilder: (Widget child, Animation<double> animation) {
               return FadeTransition(opacity: animation, child: child);
             },
-            child: toggle ? const Calculator() : const QRCodeScanner(),
+            child: toggle ? const Calculator() : qrCodeDailog(),
           ),
           const SizedBox(height: 50),
           ElevatedButton(
+            style: ButtonStyle(
+              fixedSize: MaterialStateProperty.all(const Size(200, 60)),
+            ),
             onPressed: () {
               setState(() {
                 toggle = !toggle;
               });
             },
-            child: Text(toggle ? 'Switch to QR ' : 'Switch to Pin'),
+            child: Text(
+              toggle ? 'Switch to QR ' : 'Switch to Pin',
+              style: const TextStyle(
+                  color: Color.fromRGBO(30, 60, 87, 1),
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       );

@@ -12,8 +12,7 @@ class AuthService {
 
     try {
       final response = await http.post(
-        Uri.parse(
-            'https://monstersmokeoutlet.com/public/timestation/public/api/login'),
+        Uri.parse('https://opaltimecard.com/api/login'),
         body: body,
       );
 
@@ -23,7 +22,7 @@ class AuthService {
         if (responseBody['success'] == true) {
           LoggedInUser loggedInUser =
               LoggedInUser.fromJson(responseBody['data']);
-          log('loggedinUSer: ${loggedInUser.toJson()}');
+          // log('loggedinUSer: ${loggedInUser.toJson()}');
 
           Map<String, dynamic> map = loggedInUser.toJson();
           log('store url success');

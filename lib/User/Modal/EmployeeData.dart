@@ -1,29 +1,23 @@
-// ignore_for_file: non_constant_identifier_names
-
-class EmployeeModel {
+class EmployeeAttendance {
   final String? employeename;
-  final String? pin;
   final String? perhourrate;
   final String? In;
   final String? out;
   final String? difference;
-  const EmployeeModel(
+  const EmployeeAttendance(
       {this.employeename,
-      this.pin,
       this.perhourrate,
       this.In,
       this.out,
       this.difference});
-  EmployeeModel copyWith(
+  EmployeeAttendance copyWith(
       {String? employeename,
-      String? pin,
       String? perhourrate,
       String? In,
       String? out,
       String? difference}) {
-    return EmployeeModel(
+    return EmployeeAttendance(
         employeename: employeename ?? this.employeename,
-        pin: pin ?? this.pin,
         perhourrate: perhourrate ?? this.perhourrate,
         In: In ?? this.In,
         out: out ?? this.out,
@@ -33,7 +27,6 @@ class EmployeeModel {
   Map<String, Object?> toJson() {
     return {
       'employeename': employeename,
-      'pin': pin,
       'perhourrate': perhourrate,
       'in': In,
       'out': out,
@@ -41,12 +34,11 @@ class EmployeeModel {
     };
   }
 
-  static EmployeeModel fromJson(Map<String, Object?> json) {
-    return EmployeeModel(
+  static EmployeeAttendance fromJson(Map<String, Object?> json) {
+    return EmployeeAttendance(
         employeename: json['employeename'] == null
             ? null
             : json['employeename'] as String,
-        pin: json['pin'] == null ? null : json['pin'] as String,
         perhourrate:
             json['perhourrate'] == null ? null : json['perhourrate'] as String,
         In: json['in'] == null ? null : json['in'] as String,
@@ -57,9 +49,8 @@ class EmployeeModel {
 
   @override
   String toString() {
-    return '''EmployeeModel(
+    return '''EmployeeAttendance(
                 employeename:$employeename,
-pin:$pin,
 perhourrate:$perhourrate,
 in:$In,
 out:$out,
@@ -69,10 +60,9 @@ difference:$difference
 
   @override
   bool operator ==(Object other) {
-    return other is EmployeeModel &&
+    return other is EmployeeAttendance &&
         other.runtimeType == runtimeType &&
         other.employeename == employeename &&
-        other.pin == pin &&
         other.perhourrate == perhourrate &&
         other.In == In &&
         other.out == out &&
@@ -82,6 +72,6 @@ difference:$difference
   @override
   int get hashCode {
     return Object.hash(
-        runtimeType, employeename, pin, perhourrate, In, out, difference);
+        runtimeType, employeename, perhourrate, In, out, difference);
   }
 }

@@ -104,16 +104,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Image.asset(
-                'assets/images/login_img.png',
-                width: screenWidth >= 600 ? 400 : 250,
-                height: screenWidth >= 600 ? 400 : 250,
+                'assets/images/logo.png',
               ),
-              const SizedBox(height: 20),
-              Text("Sign In",
-                  style: TextStyle(
-                      fontSize: screenWidth >= 600 ? 35 : 25,
-                      color: const Color.fromARGB(255, 37, 84, 124),
-                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 40),
               CustomInputField(
                   controller: emailaddress,
@@ -181,13 +173,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const Text("Sign In",
-                            style: TextStyle(
-                              fontSize: 40,
-                              color: Color.fromARGB(255, 37, 84, 124),
-                              fontWeight: FontWeight.bold,
-                            )),
-                        const SizedBox(height: 60),
+                        Image.asset(
+                          'assets/images/logo.png',
+                          // width: wid >= 600 ? 400 : 250,
+                          // height: screenWidth >= 600 ? 400 : 250,
+                        ),
+                        const SizedBox(height: 40),
                         CustomInputField(
                             controller: emailaddress,
                             labelText: 'Email Address ',
