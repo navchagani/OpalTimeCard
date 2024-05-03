@@ -9,7 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/User/Services/userService.dart';
 import 'package:opaltimecard/User/Views/logoutDailog.dart';
-import 'package:opaltimecard/Utils/calculator.dart';
+import 'package:opaltimecard/Utils/employeeScreen.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -38,7 +38,7 @@ class _UserScreenState extends State<UserScreen> {
   void reassemble() {
     super.reassemble();
     if (Platform.isAndroid) {
-      controller!.pauseCamera();
+      controller?.pauseCamera();
     } else if (Platform.isIOS) {
       controller!.resumeCamera();
     }
@@ -138,7 +138,7 @@ class _UserScreenState extends State<UserScreen> {
           const SizedBox(
             width: 20,
           ),
-          const Calculator(),
+          const EmployeeScreen(),
         ],
       );
     } else {
@@ -149,7 +149,7 @@ class _UserScreenState extends State<UserScreen> {
             transitionBuilder: (Widget child, Animation<double> animation) {
               return FadeTransition(opacity: animation, child: child);
             },
-            child: toggle ? const Calculator() : qrCodeDailog(),
+            child: toggle ? const EmployeeScreen() : qrCodeDailog(),
           ),
           const SizedBox(height: 50),
           ElevatedButton(

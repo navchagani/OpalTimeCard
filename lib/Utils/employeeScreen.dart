@@ -1,25 +1,29 @@
-// ignore_for_file: use_build_context_synchronously, prefer_const_constructors
+// ignore_for_file: use_build_context_synchronously, prefer_const_constructors, prefer_interpolation_to_compose_strings
 
+import 'dart:convert';
 import 'dart:developer';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:opaltimecard/User/Modal/usermodal.dart';
+import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
+import 'package:opaltimecard/User/Modal/EmployeeData.dart';
 import 'package:opaltimecard/User/Services/userService.dart';
-import 'package:opaltimecard/bloc/Blocs.dart';
+import 'package:opaltimecard/localDatabase/DatabaseHelper.dart';
 import 'package:pinput/pinput.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class Calculator extends StatefulWidget {
-  const Calculator({Key? key}) : super(key: key);
+class EmployeeScreen extends StatefulWidget {
+  const EmployeeScreen({Key? key}) : super(key: key);
 
   @override
-  State<Calculator> createState() => _CalculatorState();
+  State<EmployeeScreen> createState() => _EmployeeScreenState();
 }
 
-class _CalculatorState extends State<Calculator> {
+class _EmployeeScreenState extends State<EmployeeScreen> {
   TextEditingController pinCode = TextEditingController();
   UserService userService = UserService();
+  List<LoggedInUser>? currentUser;
 
   String text = '';
   FocusNode pinFocusNode = FocusNode();
@@ -52,8 +56,136 @@ class _CalculatorState extends State<Calculator> {
     });
   }
 
+  // void employeeAttendance({required BuildContext context}) async {
+  //   await userService.userAttendance(context, pinCode.text);
+
+  //   setState(() {
+  //     pinCode.clear();
+  //     text = '';
+  //   });
+  // }
+//   extension IterableExtension<T> on Iterable<T> {
+//   T? firstWhereOrNull(bool Function(T) test) {
+//     for (final element in this) {
+//       if (test(element)) {
+//         return element;
+//       }
+//     }
+//     return null;
+//   }
+// }
+
   void employeeAttendance({required BuildContext context}) async {
-    await userService.userAttendance(context, pinCode.text);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? userJson = prefs.getString('loggedInUser');
+    if (userJson != null) {
+      Map<String, dynamic> userMap = jsonDecode(userJson);
+      LoggedInUser loggedInUser = LoggedInUser.fromJson(userMap);
+      List<Employees>? employees = loggedInUser.employees;
+
+      bool pinMatch =
+          employees!.any((employee) => employee.pin == pinCode.text);
+
+      if (pinMatch) {
+        Employees? matchedEmployee = employees.firstWhere(
+          (employee) => employee.pin == pinCode.text,
+          orElse: () {
+            log('Employee not found with pin ${pinCode.text}');
+            return Employees(); // return a default employee object
+          },
+        );
+
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            double width = MediaQuery.of(context).size.width;
+
+            return Dialog(
+              child: SizedBox(
+                width: width > 800 ? width * 0.3 : width * 0.5,
+                child: Wrap(
+                  children: [
+                    Column(children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20)),
+                          color: Colors.green.shade800,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(10.0),
+                              child: Text(
+                                ' ${matchedEmployee.name ?? "Unknown"}',
+                                style: const TextStyle(
+                                  fontSize: 25,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                textAlign: TextAlign.start,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(
+                        height: 3,
+                      ),
+                      const SizedBox(
+                        height: 20,
+                      ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.login_rounded,
+                            color: Colors.green.shade800,
+                            size: 50,
+                          ),
+                          const SizedBox(
+                            width: 20,
+                          ),
+                          Text(
+                            'Time: ${DateFormat('hh:mm a').format(DateTime.now())}',
+                            style: TextStyle(
+                                fontSize: width < 700 ? 20 : 25,
+                                fontWeight: FontWeight.bold),
+                          )
+                        ],
+                      ),
+                      const SizedBox(
+                        height: 5,
+                      ),
+                      const SizedBox(
+                        height: 30,
+                      ),
+                    ]),
+                  ],
+                ),
+              ),
+            );
+          },
+        ).whenComplete(() async {
+          String currentTime = DateFormat('hh:mm a').format(DateTime.now());
+          EmployeeAttendance attendanceRecord = EmployeeAttendance(
+            employeename: matchedEmployee.name,
+            pin: matchedEmployee.pin,
+            checkIn: currentTime,
+          );
+          int id =
+              await DatabaseHelper.instance.insertAttendance(attendanceRecord);
+          log('Attendance record inserted with ID: $id');
+
+          log('Attendance record with ID $id inserted successfully');
+        });
+      } else {
+        log('PIN not found: ${pinCode.text}');
+      }
+    }
 
     setState(() {
       pinCode.clear();
@@ -69,8 +201,8 @@ class _CalculatorState extends State<Calculator> {
       child: ElevatedButton(
         onPressed: () async {
           calculation(btntxt);
-          final player = AudioPlayer();
-          await player.play(AssetSource('audios/touch.mp3'));
+          // final player = AudioPlayer();
+          // await player.play(AssetSource('audios/touch.mp3'));
         },
         style: ElevatedButton.styleFrom(
           shape: const CircleBorder(),
