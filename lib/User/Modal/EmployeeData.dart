@@ -1,73 +1,72 @@
 class EmployeeAttendance {
-  final String? employeename;
+  final int? employeeId;
+  final String? employeeName;
   final String? pin;
-  final String? perhourrate;
-  final String? checkIn;
-  final String? checkOut;
-  final String? difference;
+  final String? date;
+  final String? time;
+  final String? uid;
   final String? status;
   const EmployeeAttendance(
-      {this.employeename,
+      {this.employeeId,
+      this.employeeName,
       this.pin,
-      this.perhourrate,
-      this.checkIn,
-      this.checkOut,
-      this.difference,
+      this.date,
+      this.time,
+      this.uid,
       this.status});
   EmployeeAttendance copyWith(
-      {String? employeename,
+      {int? employeeId,
+      String? employeeName,
       String? pin,
-      String? perhourrate,
-      String? checkIn,
-      String? checkOut,
-      String? difference,
+      String? date,
+      String? time,
+      String? uid,
       String? status}) {
     return EmployeeAttendance(
-        employeename: employeename ?? this.employeename,
+        employeeId: employeeId ?? this.employeeId,
+        employeeName: employeeName ?? this.employeeName,
         pin: pin ?? this.pin,
-        perhourrate: perhourrate ?? this.perhourrate,
-        checkIn: checkIn ?? this.checkIn,
-        checkOut: checkOut ?? this.checkOut,
-        difference: difference ?? this.difference,
+        date: date ?? this.date,
+        time: time ?? this.time,
+        uid: uid ?? this.uid,
         status: status ?? this.status);
   }
 
   Map<String, Object?> toJson() {
     return {
-      'employeename': employeename,
+      'employee_id': employeeId,
+      'employee_name': employeeName,
       'pin': pin,
-      'perhourrate': perhourrate,
-      'checkIn': checkIn,
-      'checkOut': checkOut,
-      'difference': difference,
+      'date': date,
+      'time': time,
+      'uid': uid,
       'status': status
     };
   }
 
   static EmployeeAttendance fromJson(Map<String, Object?> json) {
     return EmployeeAttendance(
-        employeename: json['employeename'] == null
+        employeeId:
+            json['employee_id'] == null ? null : json['employee_id'] as int,
+        employeeName: json['employee_name'] == null
             ? null
-            : json['employeename'] as String,
+            : json['employee_name'] as String,
         pin: json['pin'] == null ? null : json['pin'] as String,
-        perhourrate:
-            json['perhourrate'] == null ? null : json['perhourrate'] as String,
-        checkIn: json['checkIn'] == null ? null : json['checkIn'] as String,
-        checkOut: json['checkOut'] == null ? null : json['checkOut'] as String,
-        difference:
-            json['difference'] == null ? null : json['difference'] as String,
+        date: json['date'] == null ? null : json['date'] as String,
+        time: json['time'] == null ? null : json['time'] as String,
+        uid: json['uid'] == null ? null : json['uid'] as String,
         status: json['status'] == null ? null : json['status'] as String);
   }
 
   @override
   String toString() {
     return '''EmployeeAttendance(
-                employeename:$employeename,
+                employeeId:$employeeId,
+employeeName:$employeeName,
 pin:$pin,
-perhourrate:$perhourrate,
-checkIn:$checkIn,
-checkOut:$checkOut,
-difference:$difference,
+date:$date,
+time:$time,
+uid:$uid,
 status:$status
     ) ''';
   }
@@ -76,18 +75,18 @@ status:$status
   bool operator ==(Object other) {
     return other is EmployeeAttendance &&
         other.runtimeType == runtimeType &&
-        other.employeename == employeename &&
+        other.employeeId == employeeId &&
+        other.employeeName == employeeName &&
         other.pin == pin &&
-        other.perhourrate == perhourrate &&
-        other.checkIn == checkIn &&
-        other.checkOut == checkOut &&
-        other.difference == difference &&
+        other.date == date &&
+        other.time == time &&
+        other.uid == uid &&
         other.status == status;
   }
 
   @override
   int get hashCode {
-    return Object.hash(runtimeType, employeename, pin, perhourrate, checkIn,
-        checkOut, difference, status);
+    return Object.hash(
+        runtimeType, employeeId, employeeName, pin, date, time, uid, status);
   }
 }

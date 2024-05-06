@@ -24,6 +24,7 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
   TextEditingController pinCode = TextEditingController();
   UserService userService = UserService();
   List<LoggedInUser>? currentUser;
+  List<EmployeeAttendance> attendanceList = [];
 
   String text = '';
   FocusNode pinFocusNode = FocusNode();
@@ -94,96 +95,325 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
             return Employees(); // return a default employee object
           },
         );
+        List<EmployeeAttendance> allAttendance = await DatabaseHelper.instance
+            .getAllAttendanceForEmployee(matchedEmployee.id!);
+        log('All attendance records for ${matchedEmployee.name}: $allAttendance');
 
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            double width = MediaQuery.of(context).size.width;
+        EmployeeAttendance? lastAttendance = await DatabaseHelper.instance
+            .getLastAttendance(matchedEmployee.pin!);
 
-            return Dialog(
-              child: SizedBox(
-                width: width > 800 ? width * 0.3 : width * 0.5,
-                child: Wrap(
-                  children: [
-                    Column(children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(20),
-                              topRight: Radius.circular(20)),
-                          color: Colors.green.shade800,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        if (lastAttendance != null && lastAttendance.status == 'in') {
+          List<String> parts = lastAttendance.time!.split(":");
+          int hours = int.parse(parts[0]);
+          int minutes = int.parse(parts[1]);
+          DateTime dateTime = DateTime(DateTime.now().year,
+              DateTime.now().month, DateTime.now().day, hours, minutes);
+          String lastTime = DateFormat('hh:mm a').format(dateTime);
+
+          String currentTime = DateFormat('HH:mm').format(DateTime.now());
+          DateTime time1 = DateFormat('HH:mm').parse(currentTime);
+          DateTime time2 =
+              DateFormat('HH:mm').parse(lastAttendance.time.toString());
+
+          Duration difference = time1.difference(time2);
+
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context) {
+              double width = MediaQuery.of(context).size.width;
+
+              return Dialog(
+                child: SizedBox(
+                  width: width > 800 ? width * 0.3 : width * 0.5,
+                  child: Wrap(
+                    children: [
+                      Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.all(10.0),
-                              child: Text(
-                                ' ${matchedEmployee.name ?? "Unknown"}',
-                                style: const TextStyle(
-                                  fontSize: 25,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                            Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(20),
+                                    topRight: Radius.circular(20)),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(10.0),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      ' ${matchedEmployee.name ?? "Unknown"}',
+                                      style: const TextStyle(
+                                        fontSize: 25,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.start,
+                                    ),
+                                  ],
                                 ),
-                                textAlign: TextAlign.start,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const Divider(
-                        height: 3,
-                      ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.login_rounded,
-                            color: Colors.green.shade800,
-                            size: 50,
-                          ),
-                          const SizedBox(
-                            width: 20,
-                          ),
-                          Text(
-                            'Time: ${DateFormat('hh:mm a').format(DateTime.now())}',
-                            style: TextStyle(
-                                fontSize: width < 700 ? 20 : 25,
-                                fontWeight: FontWeight.bold),
-                          )
-                        ],
-                      ),
-                      const SizedBox(
-                        height: 5,
-                      ),
-                      const SizedBox(
-                        height: 30,
-                      ),
-                    ]),
-                  ],
+                            const Divider(
+                              height: 3,
+                            ),
+                            const SizedBox(
+                              height: 20,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 10),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  const Column(
+                                    children: [
+                                      Icon(
+                                        Icons.logout_rounded,
+                                        color: Colors.red,
+                                        size: 50,
+                                      ),
+                                    ],
+                                  ),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Out',
+                                        style: TextStyle(
+                                            fontSize: width < 700 ? 20 : 25,
+                                            fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.start,
+                                      ),
+                                      Text(
+                                        DateFormat('hh:mm a')
+                                            .format(DateTime.now()),
+                                        style: TextStyle(
+                                            fontSize: width < 700 ? 15 : 20,
+                                            fontWeight: FontWeight.bold),
+                                      )
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(
+                              height: 10,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 10),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      const SizedBox(
+                                        width: 10,
+                                      ),
+                                      const Text(
+                                        'In:',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        width: 5,
+                                      ),
+                                      Text(
+                                        "${lastAttendance.date ?? ''} $lastTime",
+                                        style: TextStyle(
+                                            fontSize: width < 700 ? 15 : 20,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(
+                                    height: 5,
+                                  ),
+                                  Row(
+                                    children: [
+                                      const SizedBox(
+                                        width: 10,
+                                      ),
+                                      const Text(
+                                        'Out:',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        width: 5,
+                                      ),
+                                      Text(
+                                        DateFormat('yyyy-MM-DD hh:mm ')
+                                            .format(DateTime.now()),
+                                        style: TextStyle(
+                                            fontSize: width < 700 ? 15 : 20,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(
+                                    height: 5,
+                                  ),
+                                  Row(
+                                    children: [
+                                      SizedBox(
+                                        width: 10,
+                                      ),
+                                      Text(
+                                        'Hours:',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 5,
+                                      ),
+                                      Text(
+                                        "${difference.inHours.toString().padLeft(2, '0')}:${difference.inMinutes.remainder(60).toString().padLeft(2, '0')}",
+                                        style: TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color.fromRGBO(30, 60, 87, 1),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(
+                              height: 10,
+                            )
+                          ]),
+                    ],
+                  ),
                 ),
+              );
+            },
+          ).whenComplete(() async {
+            String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
+            String currentDate =
+                DateFormat('yyyy-MM-dd').format(DateTime.now());
+            await DatabaseHelper.instance.insertAttendance(
+              lastAttendance.copyWith(
+                time: currentTime,
+                date: currentDate,
+                uid: loggedInUser.uid,
+                status: 'out',
               ),
             );
-          },
-        ).whenComplete(() async {
-          String currentTime = DateFormat('hh:mm a').format(DateTime.now());
-          EmployeeAttendance attendanceRecord = EmployeeAttendance(
-            employeename: matchedEmployee.name,
-            pin: matchedEmployee.pin,
-            checkIn: currentTime,
-          );
-          int id =
-              await DatabaseHelper.instance.insertAttendance(attendanceRecord);
-          log('Attendance record inserted with ID: $id');
+            log('Attendance record updated for ${matchedEmployee.name}');
+          });
+          final player = AudioPlayer();
+          await player.play(AssetSource('audios/out.mp3'));
+          Future.delayed(const Duration(seconds: 5), () {
+            Navigator.of(context, rootNavigator: true).pop();
+          });
+        } else {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context) {
+              double width = MediaQuery.of(context).size.width;
 
-          log('Attendance record with ID $id inserted successfully');
-        });
+              return Dialog(
+                child: SizedBox(
+                  width: width > 800 ? width * 0.3 : width * 0.5,
+                  child: Wrap(
+                    children: [
+                      Column(children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(20),
+                                topRight: Radius.circular(20)),
+                            color: Colors.green.shade800,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(10.0),
+                                child: Text(
+                                  ' ${matchedEmployee.name ?? "Unknown"}',
+                                  style: const TextStyle(
+                                    fontSize: 25,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                  textAlign: TextAlign.start,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(
+                          height: 3,
+                        ),
+                        const SizedBox(
+                          height: 20,
+                        ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.login_rounded,
+                              color: Colors.green.shade800,
+                              size: 50,
+                            ),
+                            const SizedBox(
+                              width: 20,
+                            ),
+                            Text(
+                              'IN: ${DateFormat('hh:mm a').format(DateTime.now())}',
+                              style: TextStyle(
+                                  fontSize: width < 700 ? 20 : 25,
+                                  fontWeight: FontWeight.bold),
+                            )
+                          ],
+                        ),
+                        const SizedBox(
+                          height: 30,
+                        ),
+                      ]),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ).whenComplete(() async {
+            String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
+            String currentDate =
+                DateFormat('yyyy-MM-dd').format(DateTime.now());
+            EmployeeAttendance attendanceRecord = EmployeeAttendance(
+              employeeId: matchedEmployee.id,
+              employeeName: matchedEmployee.name,
+              pin: matchedEmployee.pin,
+              time: currentTime,
+              date: currentDate,
+              uid: loggedInUser.uid,
+              status: 'in',
+            );
+            int id = await DatabaseHelper.instance
+                .insertAttendance(attendanceRecord);
+            log('Attendance record inserted with ID: $id');
+          });
+          final player = AudioPlayer();
+          await player.play(AssetSource('audios/in.mp3'));
+          Future.delayed(const Duration(seconds: 5), () {
+            Navigator.of(context, rootNavigator: true).pop();
+          });
+        }
       } else {
-        log('PIN not found: ${pinCode.text}');
+        final player = AudioPlayer();
+        await player.play(AssetSource('audios/pleasetryagain.mp3'));
+        _showerrorDailog(context);
       }
     }
 
@@ -191,6 +421,94 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
       pinCode.clear();
       text = '';
     });
+  }
+
+  void _showerrorDailog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return errorDailog(context);
+      },
+    );
+
+    Future.delayed(const Duration(seconds: 5), () {
+      Navigator.of(context, rootNavigator: true).pop();
+    });
+  }
+
+  errorDailog(BuildContext context) {
+    double width = MediaQuery.of(context).size.width;
+
+    return Dialog(
+      child: SizedBox(
+        width: width > 800 ? width * 0.3 : width * 0.5,
+        child: Wrap(
+          children: [
+            Column(children: [
+              Container(
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20)),
+                  color: Colors.red,
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(10.0),
+                      child: Text(
+                        'Alert',
+                        style: TextStyle(
+                          fontSize: 25,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.start,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(
+                height: 3,
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.error,
+                      color: Colors.red,
+                      size: 30,
+                    ),
+                    const SizedBox(
+                      width: 20,
+                    ),
+                    Text(
+                      "Invalid User",
+                      style: TextStyle(
+                          color: Colors.red,
+                          fontSize: width < 700 ? 20 : 25,
+                          fontWeight: FontWeight.bold),
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(
+                height: 30,
+              ),
+            ]),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget calcButton(String btntxt, Color btncolor, Color txtcolor) {
@@ -201,8 +519,8 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
       child: ElevatedButton(
         onPressed: () async {
           calculation(btntxt);
-          // final player = AudioPlayer();
-          // await player.play(AssetSource('audios/touch.mp3'));
+          final player = AudioPlayer();
+          await player.play(AssetSource('audios/touch.mp3'));
         },
         style: ElevatedButton.styleFrom(
           shape: const CircleBorder(),

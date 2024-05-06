@@ -12,8 +12,16 @@ import 'package:opaltimecard/bloc/Blocs.dart';
 
 class UserService {
   Future<Map<String, dynamic>> userAttendance(
-      BuildContext context, String pin) async {
-    final body = {'pin': pin};
+    BuildContext context,
+  ) async {
+    final body = {
+      'pin': 2222,
+      'empid': '115',
+      'date': '2024-05-04',
+      'time': '03:50:02',
+      'status': 'out',
+      'uid': '1'
+    };
 
     try {
       final response = await http.post(
@@ -25,28 +33,11 @@ class UserService {
         final Map<String, dynamic> responseBody = json.decode(response.body);
 
         if (responseBody['success'] == true) {
-          EmployeeModel employeeModel =
-              EmployeeModel.fromJson(responseBody['data']);
-          EmployeeBloc employeeBloc = BlocProvider.of<EmployeeBloc>(context);
-          employeeBloc.add(employeeModel);
-          Map<String, dynamic> map = employeeModel.toJson();
-
-          log("emoloye data:${employeeModel.toJson()} ");
-
-          _showEmployeeCardDialog(context);
-          if (employeeModel.out == null) {
-            final player = AudioPlayer();
-            await player.play(AssetSource('audios/in.mp3'));
-          } else {
-            final player = AudioPlayer();
-            await player.play(AssetSource('audios/out.mp3'));
-          }
-
-          return {'success': true, 'data': map};
+          return {'success': true};
         } else {
           String errorMessage =
               responseBody['error'] ?? 'An unknown error occurred';
-          _showerrorDailog(context, errorMessage);
+          // _showerrorDailog(context, errorMessage);
         }
       } else {
         log('Wrong password or other HTTP error');
@@ -54,9 +45,8 @@ class UserService {
         final error = responseBody['error'] ??
             responseBody['data']['error'] ??
             'Network error';
-        _showerrorDailog(context, error);
-        final player = AudioPlayer();
-        await player.play(AssetSource('audios/pleasetryagain.mp3'));
+        // _showerrorDailog(context, error);
+
         return {'success': false, 'error': error};
       }
     } catch (e) {
@@ -66,94 +56,6 @@ class UserService {
 
     // Add a return statement here
     return {'success': false, 'error': 'Unknown error occurred'};
-  }
-
-  void _showerrorDailog(BuildContext context, String error) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return errorDailog(context, error);
-      },
-    );
-
-    Future.delayed(const Duration(seconds: 5), () {
-      Navigator.of(context, rootNavigator: true).pop();
-    });
-  }
-
-  errorDailog(BuildContext context, String error) {
-    double width = MediaQuery.of(context).size.width;
-
-    return Dialog(
-      child: SizedBox(
-        width: width > 800 ? width * 0.3 : width * 0.5,
-        child: Wrap(
-          children: [
-            Column(children: [
-              Container(
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20)),
-                  color: Colors.red,
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(10.0),
-                      child: Text(
-                        'Alert',
-                        style: TextStyle(
-                          fontSize: 25,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.start,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(
-                height: 3,
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 20),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.error,
-                      color: Colors.red,
-                      size: 30,
-                    ),
-                    const SizedBox(
-                      width: 20,
-                    ),
-                    Text(
-                      error,
-                      style: TextStyle(
-                          color: Colors.red,
-                          fontSize: width < 700 ? 20 : 25,
-                          fontWeight: FontWeight.bold),
-                    )
-                  ],
-                ),
-              ),
-              const SizedBox(
-                height: 30,
-              ),
-            ]),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showEmployeeCardDialog(BuildContext context) {

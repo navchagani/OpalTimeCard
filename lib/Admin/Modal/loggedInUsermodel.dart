@@ -1,16 +1,19 @@
 class LoggedInUser {
+  final String? uid;
   final String? username;
   final String? email;
   final String? locationId;
   final List<Employees>? employees;
   const LoggedInUser(
-      {this.username, this.email, this.locationId, this.employees});
+      {this.uid, this.username, this.email, this.locationId, this.employees});
   LoggedInUser copyWith(
-      {String? username,
+      {String? uid,
+      String? username,
       String? email,
       String? locationId,
       List<Employees>? employees}) {
     return LoggedInUser(
+        uid: uid ?? this.uid,
         username: username ?? this.username,
         email: email ?? this.email,
         locationId: locationId ?? this.locationId,
@@ -19,6 +22,7 @@ class LoggedInUser {
 
   Map<String, Object?> toJson() {
     return {
+      'uid': uid,
       'username': username,
       'email': email,
       'location_id': locationId,
@@ -29,6 +33,7 @@ class LoggedInUser {
 
   static LoggedInUser fromJson(Map<String, Object?> json) {
     return LoggedInUser(
+        uid: json['uid'] == null ? null : json['uid'] as String,
         username: json['username'] == null ? null : json['username'] as String,
         email: json['email'] == null ? null : json['email'] as String,
         locationId:
@@ -44,7 +49,8 @@ class LoggedInUser {
   @override
   String toString() {
     return '''LoggedInUser(
-                username:$username,
+                uid:$uid,
+username:$username,
 email:$email,
 locationId:$locationId,
 employees:${employees.toString()}
@@ -55,6 +61,7 @@ employees:${employees.toString()}
   bool operator ==(Object other) {
     return other is LoggedInUser &&
         other.runtimeType == runtimeType &&
+        other.uid == uid &&
         other.username == username &&
         other.email == email &&
         other.locationId == locationId &&
@@ -63,19 +70,26 @@ employees:${employees.toString()}
 
   @override
   int get hashCode {
-    return Object.hash(runtimeType, username, email, locationId, employees);
+    return Object.hash(
+        runtimeType, uid, username, email, locationId, employees);
   }
 }
 
 class Employees {
+  final int? id;
   final String? name;
   final String? pin;
   final String? starttime;
   final String? endtime;
-  const Employees({this.name, this.pin, this.starttime, this.endtime});
+  const Employees({this.id, this.name, this.pin, this.starttime, this.endtime});
   Employees copyWith(
-      {String? name, String? pin, String? starttime, String? endtime}) {
+      {int? id,
+      String? name,
+      String? pin,
+      String? starttime,
+      String? endtime}) {
     return Employees(
+        id: id ?? this.id,
         name: name ?? this.name,
         pin: pin ?? this.pin,
         starttime: starttime ?? this.starttime,
@@ -84,6 +98,7 @@ class Employees {
 
   Map<String, Object?> toJson() {
     return {
+      'id': id,
       'name': name,
       'pin': pin,
       'starttime': starttime,
@@ -93,6 +108,7 @@ class Employees {
 
   static Employees fromJson(Map<String, Object?> json) {
     return Employees(
+        id: json['id'] == null ? null : json['id'] as int,
         name: json['name'] == null ? null : json['name'] as String,
         pin: json['pin'] == null ? null : json['pin'] as String,
         starttime:
@@ -103,7 +119,8 @@ class Employees {
   @override
   String toString() {
     return '''Employees(
-                name:$name,
+                id:$id,
+name:$name,
 pin:$pin,
 starttime:$starttime,
 endtime:$endtime
@@ -114,6 +131,7 @@ endtime:$endtime
   bool operator ==(Object other) {
     return other is Employees &&
         other.runtimeType == runtimeType &&
+        other.id == id &&
         other.name == name &&
         other.pin == pin &&
         other.starttime == starttime &&
@@ -122,6 +140,6 @@ endtime:$endtime
 
   @override
   int get hashCode {
-    return Object.hash(runtimeType, name, pin, starttime, endtime);
+    return Object.hash(runtimeType, id, name, pin, starttime, endtime);
   }
 }
