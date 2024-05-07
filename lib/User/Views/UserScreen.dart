@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_interpolation_to_compose_strings, unnecessary_null_comparison
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
@@ -32,7 +34,7 @@ class _UserScreenState extends State<UserScreen> {
   bool attendance = false;
   List<LoggedInUser>? currentUser;
   List<EmployeeAttendance> attendanceList = [];
-
+  Timer? timer;
   String UserLocation = '';
   late SharedPreferences _prefs;
   bool loggingIn = false;
@@ -654,9 +656,9 @@ class _UserScreenState extends State<UserScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         onPressed: () async {
-          DatabaseHelper databaseHelper = DatabaseHelper.instance;
-          await databaseHelper.deleteAllRecords();
-          // startPostingData();
+          // DatabaseHelper databaseHelper = DatabaseHelper.instance;
+          // await databaseHelper.deleteAllRecords();
+          startPostingData();
           // showDialog(
           //     context: context,
           //     builder: (context) => LogoutDailog(
@@ -669,20 +671,49 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
-  void startPostingData() {
-    Timer.periodic(const Duration(seconds: 5), (Timer t) async {
-      DatabaseHelper databaseHelper = DatabaseHelper.instance;
-      List<EmployeeAttendance> records =
-          await databaseHelper.getAllAttendanceRecord();
+  void startPostingData() async {
+    Timer? timer;
+    if (timer != null && timer.isActive) return;
 
-      if (records.isNotEmpty) {
-        for (var record in records) {
-          await databaseHelper.postDataToAPI(record);
+    // timer = Timer.periodic(const Duration(seconds: 5), (Timer t) async {
+    DatabaseHelper databaseHelper = DatabaseHelper.instance;
+    List<EmployeeAttendance> records =
+        await databaseHelper.getAllAttendanceRecord();
+
+    // Map to store in-progress "in" records by employee ID
+    Map<int, EmployeeAttendance> inRecords = {};
+
+    for (var record in records) {
+      if (record.status == "in") {
+        if (inRecords.containsKey(record.employeeId)) {
+          if (DateTime.parse(record.date! + " " + record.time!).isAfter(
+              DateTime.parse(inRecords[record.employeeId]!.date! +
+                  " " +
+                  inRecords[record.employeeId]!.time!))) {
+            inRecords[int.parse(record.employeeId.toString())] = record;
+          }
+        } else {
+          inRecords[int.parse(record.employeeId.toString())] = record;
         }
-      } else {
-        t.cancel(); // Stop the timer if there are no records
-        log('No records to post. Timer stopped.');
+      } else if (record.status == "out") {
+        if (inRecords.containsKey(record.employeeId)) {
+          EmployeeAttendance inRecord = inRecords[record.employeeId]!;
+          try {
+            await databaseHelper.postDataToAPI(inRecord);
+            await databaseHelper.postDataToAPI(record);
+            await databaseHelper.deleteAttendance(inRecord.employeeId!);
+            await databaseHelper.deleteAttendance(record.employeeId!);
+            inRecords.remove(record.employeeId);
+          } catch (e) {
+            log('Error posting data: $e');
+            continue;
+          }
+        } else {
+          log('No matching "in" record found for "out" record: $record');
+        }
       }
-    });
+    }
   }
+  // );
+  // }
 }

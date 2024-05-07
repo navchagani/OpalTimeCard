@@ -58,7 +58,6 @@ class DatabaseHelper {
     for (var item in result) {
       attendanceList.add(EmployeeAttendance.fromJson(item));
     }
-    log('All attendance records: $attendanceList');
     return attendanceList;
   }
 
@@ -87,8 +86,7 @@ class DatabaseHelper {
 
   Future<void> deleteAttendance(int id) async {
     Database db = await instance.database;
-    await db.delete('attendance', where: 'id = ?', whereArgs: [id]);
-    log('Record with ID $id deleted from database');
+    await db.delete('attendance', where: 'employee_id = ?', whereArgs: [id]);
   }
 
   Future<void> postDataToAPI(EmployeeAttendance data) async {
@@ -105,8 +103,7 @@ class DatabaseHelper {
 
       if (response.statusCode == 200) {
         log('Data posted successfully: ${data.toString()}');
-        await deleteAttendance(int.parse(data.employeeId
-            .toString())); // Delete the posted entry from local database
+        await deleteAttendance(data.employeeId!);
       } else {
         log('Failed to post data: ${response.body}');
       }
