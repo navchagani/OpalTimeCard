@@ -1,5 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, non_constant_identifier_names, unrelated_type_equality_checks
-
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
@@ -86,13 +85,11 @@ class _UserScreenState extends State<UserScreen> {
             return const Employees();
           },
         );
-        List<EmployeeAttendance> allAttendance = await DatabaseHelper.instance
-            .getAllAttendanceForEmployee(matchedEmployee.id!);
-        log('All attendance records for ${matchedEmployee.name}: $allAttendance');
-
+        List<EmployeeAttendance> allAttendance =
+            await DatabaseHelper.instance.getAllAttendance();
+        log('All attendance records $allAttendance');
         EmployeeAttendance? lastAttendance = await DatabaseHelper.instance
             .getLastAttendance(matchedEmployee.pin!);
-
         if (lastAttendance != null && lastAttendance.status == 'in') {
           List<String> parts = lastAttendance.time!.split(":");
           int hours = int.parse(parts[0]);
@@ -656,16 +653,36 @@ class _UserScreenState extends State<UserScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
-        onPressed: () {
-          showDialog(
-              context: context,
-              builder: (context) => LogoutDailog(
-                    email: emailController.text,
-                  ));
+        onPressed: () async {
+          DatabaseHelper databaseHelper = DatabaseHelper.instance;
+          await databaseHelper.deleteAllRecords();
+          // startPostingData();
+          // showDialog(
+          //     context: context,
+          //     builder: (context) => LogoutDailog(
+          //           email: emailController.text,
+          //         ));
         },
         child: const Icon(Icons.power_settings_new_rounded,
             color: Colors.deepOrange),
       ),
     );
+  }
+
+  void startPostingData() {
+    Timer.periodic(const Duration(seconds: 5), (Timer t) async {
+      DatabaseHelper databaseHelper = DatabaseHelper.instance;
+      List<EmployeeAttendance> records =
+          await databaseHelper.getAllAttendanceRecord();
+
+      if (records.isNotEmpty) {
+        for (var record in records) {
+          await databaseHelper.postDataToAPI(record);
+        }
+      } else {
+        t.cancel(); // Stop the timer if there are no records
+        log('No records to post. Timer stopped.');
+      }
+    });
   }
 }

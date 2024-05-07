@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously, prefer_const_constructors, prefer_interpolation_to_compose_strings
-
 import 'dart:convert';
 import 'dart:developer';
 
@@ -92,12 +90,12 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
           (employee) => employee.pin == pinCode.text,
           orElse: () {
             log('Employee not found with pin ${pinCode.text}');
-            return Employees(); // return a default employee object
+            return Employees();
           },
         );
-        List<EmployeeAttendance> allAttendance = await DatabaseHelper.instance
-            .getAllAttendanceForEmployee(matchedEmployee.id!);
-        log('All attendance records for ${matchedEmployee.name}: $allAttendance');
+        List<EmployeeAttendance> allAttendance =
+            await DatabaseHelper.instance.getAllAttendance();
+        log('All attendance records $allAttendance');
 
         EmployeeAttendance? lastAttendance = await DatabaseHelper.instance
             .getLastAttendance(matchedEmployee.pin!);
@@ -248,7 +246,7 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
                                         width: 5,
                                       ),
                                       Text(
-                                        DateFormat('yyyy-MM-DD hh:mm ')
+                                        DateFormat('yyyy-MM-dd hh:mm aa')
                                             .format(DateTime.now()),
                                         style: TextStyle(
                                             fontSize: width < 700 ? 15 : 20,
