@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 class ConstDialog {
   final BuildContext context;
-  ConstDialog(this.context);
+  ConstDialog(
+    this.context,
+  );
 
   showErrorDialog({
     required String error,
-    String? title,
+    Widget? title,
     final IconData? iconData,
     Color? iconColor,
     double? iconSize,
@@ -22,7 +24,7 @@ class ConstDialog {
             children: [
               Icon(
                 iconData ?? Icons.error,
-                color: iconColor ?? const Color(0xff390E82),
+                color: iconColor ?? Colors.red,
                 size: iconSize ?? 20.0,
               ),
               const SizedBox(width: 8),
@@ -36,7 +38,10 @@ class ConstDialog {
                   () {
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   },
-              child: const Text("OK"),
+              child: const Text(
+                "OK",
+                style: TextStyle(color: Colors.red),
+              ),
             ),
           ],
         );

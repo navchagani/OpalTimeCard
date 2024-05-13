@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
@@ -11,6 +12,7 @@ import 'package:opaltimecard/Admin/Services/loginService.dart';
 import 'package:opaltimecard/User/Views/UserScreen.dart';
 import 'package:opaltimecard/Utils/button.dart';
 import 'package:opaltimecard/Utils/customDailoge.dart';
+import 'package:opaltimecard/connectivity.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:opaltimecard/Utils/inputFeild.dart';
@@ -28,57 +30,108 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   bool loggingIn = false;
   final AuthService _authService = AuthService();
 
+  late StreamSubscription<bool> streamSubscription;
   TextEditingController emailaddress = TextEditingController();
   TextEditingController password = TextEditingController();
-  @override
-  void initState() {
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky,
-        overlays: [SystemUiOverlay.bottom]);
-    super.initState();
-  }
 
-  void loginUser({required BuildContext context}) async {
+  Future<void> loginUser(
+      {required BuildContext context, required bool isConnected}) async {
     String email = emailaddress.text;
     String pass = password.text;
-
-    setState(() {
-      loggingIn = true;
-    });
-
-    try {
-      final Map<String, dynamic> response =
-          await _authService.loginUser(email, pass);
-
-      if (response['success'] == true) {
-        LoggedInUser loggedInUser = LoggedInUser.fromJson(response['data']);
-
-        UserBloc userBloc = BlocProvider.of<UserBloc>(context);
-        userBloc.add(loggedInUser);
-
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        String userJson = jsonEncode(loggedInUser.toJson());
-        prefs.setString('loggedInUser', userJson);
-        prefs.setString('email', email);
-        prefs.setString('password', pass);
-        log("Saving user data: $userJson");
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const UserScreen()),
-        );
-      } else {
-        ConstDialog(context).showErrorDialog(error: response['error']['info']);
+    if (!isConnected) {
+      // Show dialog for no internet connection
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Row(
+              children: [
+                Icon(
+                  Icons.error,
+                  color: Colors.red,
+                ),
+                SizedBox(width: 8),
+                Text("Alert")
+              ],
+            ),
+            content: const Text("Check Your Internet Connection"),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Ok',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      if (mounted) {
+        setState(() {
+          loggingIn = true;
+        });
       }
-    } catch (e) {
-      ConstDialog(context).showErrorDialog(error: 'An error occurred: $e');
-      log("catch error: $e");
-    } finally {
+      if (emailaddress.text.isEmpty || password.text.isEmpty) {
+        ConstDialog(context)
+            .showErrorDialog(error: 'Please enter both username and password.');
+      }
+      try {
+        final Map<String, dynamic> response = await _authService.loginUser(
+          context,
+          emailaddress.text.trim(),
+          password.text.trim(),
+        );
+
+        if (response['success'] == true) {
+          LoggedInUser loggedInUser = LoggedInUser.fromJson(response['data']);
+
+          UserBloc userBloc = BlocProvider.of<UserBloc>(context);
+          userBloc.add(loggedInUser);
+
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          String userJson = jsonEncode(loggedInUser.toJson());
+          prefs.setString('loggedInUser', userJson);
+          prefs.setString('email', email);
+          prefs.setString('password', pass);
+          log("Saving user data: $userJson");
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const UserScreen()),
+          );
+        } else {}
+      } catch (e) {}
       if (mounted) {
         setState(() {
           loggingIn = false;
         });
       }
     }
+  }
+
+  @override
+  void initState() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky,
+        overlays: [SystemUiOverlay.bottom]);
+    streamSubscription = ConnectionFuncs.checkInternetConnectivityStream()
+        .asBroadcastStream()
+        .listen((isConnected) {
+      log('$isConnected');
+      if (mounted) {
+        CheckConnection connection = BlocProvider.of<CheckConnection>(context);
+        connection.add(isConnected);
+      }
+    });
+
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    streamSubscription.cancel();
+    super.dispose();
   }
 
   @override
@@ -222,13 +275,18 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   }
 
   Widget loginButton() {
-    return CustomButton(
-      text: "Login",
-      // buttonSize: 200,
-      isLoading: loggingIn,
-      backgroundColor: const Color.fromARGB(255, 37, 84, 124),
-      textColor: Colors.white,
-      onTap: () => loginUser(context: context),
-    );
+    return BlocBuilder<CheckConnection, bool>(builder: (context, isConnected) {
+      log("connection: $isConnected");
+
+      return CustomButton(
+          text: "Login",
+          isLoading: loggingIn,
+          backgroundColor: const Color.fromARGB(255, 37, 84, 124),
+          textColor: Colors.white,
+          onTap: () {
+            log("connection: $isConnected");
+            loginUser(context: context, isConnected: isConnected);
+          });
+    });
   }
 }

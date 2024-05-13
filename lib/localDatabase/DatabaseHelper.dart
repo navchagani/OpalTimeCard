@@ -89,23 +89,26 @@ class DatabaseHelper {
     await db.delete('attendance', where: 'employee_id = ?', whereArgs: [id]);
   }
 
-  Future<void> postDataToAPI(EmployeeAttendance data) async {
+  Future<void> postDataToAPI(List<EmployeeAttendance> dataList) async {
     try {
       var url = Uri.parse('https://opaltimecard.com/api/markofflineattandence');
-      var response = await http.post(url, body: {
-        'pin': data.pin,
-        'empid': data.employeeId.toString(),
-        'date': data.date,
-        'time': data.time,
-        'status': data.status,
-        'uid': data.uid
-      });
 
-      if (response.statusCode == 200) {
-        log('Data posted successfully: ${data.toString()}');
-        await deleteAttendance(data.employeeId!);
-      } else {
-        log('Failed to post data: ${response.body}');
+      for (var data in dataList) {
+        var response = await http.post(url, body: {
+          'pin': data.pin,
+          'empid': data.employeeId.toString(),
+          'date': data.date,
+          'time': data.time,
+          'status': data.status,
+          'uid': data.uid
+        });
+
+        if (response.statusCode == 200) {
+          log('Data posted successfully: ${data.toString()}');
+          // await deleteAttendance(data.employeeId!);
+        } else {
+          log('Failed to post data: ${response.body}');
+        }
       }
     } catch (e) {
       log('Error posting data: $e');

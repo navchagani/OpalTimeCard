@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:convert';
 import 'dart:developer';
 
@@ -34,6 +36,7 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
     pinFocusNode.addListener(() {
       if (!pinFocusNode.hasFocus) {
         pinCode.clear();
+        log('Employee not found with pin ${pinCode.text}');
       }
     });
   }
@@ -55,28 +58,11 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
     });
   }
 
-  // void employeeAttendance({required BuildContext context}) async {
-  //   await userService.userAttendance(context, pinCode.text);
-
-  //   setState(() {
-  //     pinCode.clear();
-  //     text = '';
-  //   });
-  // }
-//   extension IterableExtension<T> on Iterable<T> {
-//   T? firstWhereOrNull(bool Function(T) test) {
-//     for (final element in this) {
-//       if (test(element)) {
-//         return element;
-//       }
-//     }
-//     return null;
-//   }
-// }
-
   void employeeAttendance({required BuildContext context}) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? userJson = prefs.getString('loggedInUser');
+    log('Employee not found with pin ${pinCode.text}');
+
     if (userJson != null) {
       Map<String, dynamic> userMap = jsonDecode(userJson);
       LoggedInUser loggedInUser = LoggedInUser.fromJson(userMap);
@@ -84,13 +70,14 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
 
       bool pinMatch =
           employees!.any((employee) => employee.pin == pinCode.text);
-
+      log('Employee not found with pin ${pinCode.text}');
       if (pinMatch) {
+        log('Employee not found with pin ${pinCode.text}');
         Employees? matchedEmployee = employees.firstWhere(
           (employee) => employee.pin == pinCode.text,
           orElse: () {
             log('Employee not found with pin ${pinCode.text}');
-            return Employees();
+            return const Employees();
           },
         );
         List<EmployeeAttendance> allAttendance =
@@ -104,16 +91,17 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
           List<String> parts = lastAttendance.time!.split(":");
           int hours = int.parse(parts[0]);
           int minutes = int.parse(parts[1]);
-          DateTime dateTime = DateTime(DateTime.now().year,
-              DateTime.now().month, DateTime.now().day, hours, minutes);
+
+          List<String> dateParts = lastAttendance.date!.split("-");
+          int year = int.parse(dateParts[0]);
+          int month = int.parse(dateParts[1]);
+          int day = int.parse(dateParts[2]);
+
+          DateTime dateTime = DateTime(year, month, day, hours, minutes);
           String lastTime = DateFormat('hh:mm a').format(dateTime);
 
-          String currentTime = DateFormat('HH:mm').format(DateTime.now());
-          DateTime time1 = DateFormat('HH:mm').parse(currentTime);
-          DateTime time2 =
-              DateFormat('HH:mm').parse(lastAttendance.time.toString());
-
-          Duration difference = time1.difference(time2);
+          DateTime time1 = DateTime.now();
+          Duration difference = time1.difference(dateTime);
 
           showDialog(
             context: context,
@@ -259,21 +247,21 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
                                   ),
                                   Row(
                                     children: [
-                                      SizedBox(
+                                      const SizedBox(
                                         width: 10,
                                       ),
-                                      Text(
+                                      const Text(
                                         'Hours:',
                                         style: TextStyle(
                                           fontSize: 20,
                                         ),
                                       ),
-                                      SizedBox(
+                                      const SizedBox(
                                         width: 5,
                                       ),
                                       Text(
                                         "${difference.inHours.toString().padLeft(2, '0')}:${difference.inMinutes.remainder(60).toString().padLeft(2, '0')}",
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           fontSize: 30,
                                           fontWeight: FontWeight.bold,
                                           color: Color.fromRGBO(30, 60, 87, 1),

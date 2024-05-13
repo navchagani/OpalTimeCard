@@ -40,7 +40,7 @@ class _LogoutDailogState extends State<LogoutDailog> {
     });
     try {
       final Map<String, dynamic> response =
-          await _authService.loginUser(email, pass);
+          await _authService.loginUser(context, email, pass);
       if (response['success'] == true) {
         await _prefs.clear();
         Navigator.of(context).pop();

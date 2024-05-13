@@ -7,12 +7,15 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/User/Modal/EmployeeData.dart';
 import 'package:opaltimecard/User/Services/userService.dart';
 import 'package:opaltimecard/User/Views/logoutDailog.dart';
+import 'package:opaltimecard/Utils/customDailoge.dart';
 import 'package:opaltimecard/Utils/employeeScreen.dart';
+import 'package:opaltimecard/connectivity.dart';
 import 'package:opaltimecard/localDatabase/DatabaseHelper.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,10 +40,13 @@ class _UserScreenState extends State<UserScreen> {
   Timer? timer;
   String UserLocation = '';
   late SharedPreferences _prefs;
-  bool loggingIn = false;
   LoggedInUser? user;
   bool toggle = true;
   bool isProcessing = false;
+  late StreamSubscription<bool> streamSubscription;
+  late Timer _timer;
+  late TimeOfDay selectedTime;
+
   @override
   void reassemble() {
     super.reassemble();
@@ -96,15 +102,17 @@ class _UserScreenState extends State<UserScreen> {
           List<String> parts = lastAttendance.time!.split(":");
           int hours = int.parse(parts[0]);
           int minutes = int.parse(parts[1]);
-          DateTime dateTime = DateTime(DateTime.now().year,
-              DateTime.now().month, DateTime.now().day, hours, minutes);
-          String lastTime = DateFormat('hh:mm').format(dateTime);
-          String currentTime = DateFormat('HH:mm').format(DateTime.now());
-          DateTime time1 = DateFormat('HH:mm').parse(currentTime);
-          DateTime time2 =
-              DateFormat('HH:mm').parse(lastAttendance.time.toString());
 
-          Duration difference = time1.difference(time2);
+          List<String> dateParts = lastAttendance.date!.split("-");
+          int year = int.parse(dateParts[0]);
+          int month = int.parse(dateParts[1]);
+          int day = int.parse(dateParts[2]);
+
+          DateTime dateTime = DateTime(year, month, day, hours, minutes);
+          String lastTime = DateFormat('hh:mm a').format(dateTime);
+
+          DateTime time1 = DateTime.now();
+          Duration difference = time1.difference(dateTime);
 
           showDialog(
             context: context,
@@ -496,7 +504,6 @@ class _UserScreenState extends State<UserScreen> {
   }
 
   void resetScanner() {
-    // Reset the scanner and the processing flag after the process is complete
     if (mounted) {
       setState(() {
         result = null;
@@ -506,19 +513,37 @@ class _UserScreenState extends State<UserScreen> {
   }
 
   @override
-  void dispose() {
-    controller?.dispose();
-    super.dispose();
-  }
-
-  @override
   void initState() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky,
         overlays: [SystemUiOverlay.bottom]);
-    Future.delayed(const Duration(minutes: 1))
-        .whenComplete(() => setState(() {}));
+
+    streamSubscription = ConnectionFuncs.checkInternetConnectivityStream()
+        .asBroadcastStream()
+        .listen((isConnected) async {
+      CheckConnection connection =
+          BlocProvider.of<CheckConnection>(context, listen: false);
+      connection.add(isConnected);
+    });
+
+    Timer.periodic(const Duration(minutes: 30), (Timer timer) async {
+      bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
+      if (isConnected) {
+        postAllRecordsToAPI(isConnected);
+      } else {
+        log("No internet connection.");
+      }
+    });
+
     _loadUserData();
     super.initState();
+    selectedTime = TimeOfDay.now();
+    _timer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
+      if (mounted) {
+        setState(() {
+          selectedTime = TimeOfDay.now();
+        });
+      }
+    });
   }
 
   Future<void> _initPrefs() async {
@@ -540,6 +565,14 @@ class _UserScreenState extends State<UserScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    streamSubscription.cancel();
+    timer?.cancel();
+    controller?.dispose();
+    super.dispose();
+  }
+
   Widget qrCodeDailog() {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
@@ -552,7 +585,7 @@ class _UserScreenState extends State<UserScreen> {
         child: QRView(
           key: qrKey,
           onQRViewCreated: _onQRViewCreated,
-          cameraFacing: CameraFacing.back,
+          cameraFacing: CameraFacing.front,
           overlay: QrScannerOverlayShape(
             borderColor: Colors.red,
             borderRadius: 10,
@@ -615,97 +648,128 @@ class _UserScreenState extends State<UserScreen> {
   @override
   Widget build(BuildContext context) {
     String date = DateFormat('EEEE, MMMM d, yyyy').format(DateTime.now());
-    String time = DateFormat('hh:mm a').format(DateTime.now());
+    // String time = DateFormat('hh:mm a').format(DateTime.now());
+    String time = selectedTime.format(context);
     double height = MediaQuery.of(context).size.height;
     double width = MediaQuery.of(context).size.width;
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 29, 29, 29),
-      body: Center(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                UserLocation,
-                style: TextStyle(
-                  fontSize: width > 600 ? 30 : 20,
-                  color: const Color.fromARGB(255, 177, 149, 226),
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              Text(
-                time,
-                style: const TextStyle(
-                    fontSize: 50,
+        backgroundColor: const Color.fromARGB(255, 29, 29, 29),
+        body: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  UserLocation,
+                  style: TextStyle(
+                    fontSize: width > 600 ? 30 : 20,
+                    color: const Color.fromARGB(255, 177, 149, 226),
                     fontWeight: FontWeight.w900,
-                    color: Colors.white),
-              ),
-              Text(
-                date,
-                style: TextStyle(
-                    fontSize: width > 600 ? 30 : 20, color: Colors.white),
-              ),
-              SizedBox(height: height > 768 ? height / 20 : height / 30),
-              userAttendance(),
-            ],
+                  ),
+                ),
+                Text(
+                  time,
+                  style: const TextStyle(
+                      fontSize: 50,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white),
+                ),
+                Text(
+                  date,
+                  style: TextStyle(
+                      fontSize: width > 600 ? 30 : 20, color: Colors.white),
+                ),
+                SizedBox(height: height > 768 ? height / 20 : height / 30),
+                userAttendance(),
+              ],
+            ),
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        onPressed: () async {
-          // DatabaseHelper databaseHelper = DatabaseHelper.instance;
-          // await databaseHelper.deleteAllRecords();
-          startPostingData();
-          // showDialog(
-          //     context: context,
-          //     builder: (context) => LogoutDailog(
-          //           email: emailController.text,
-          //         ));
-        },
-        child: const Icon(Icons.power_settings_new_rounded,
-            color: Colors.deepOrange),
-      ),
-    );
+        floatingActionButton: BlocBuilder<CheckConnection, bool>(
+          builder: (context, isConnected) {
+            return FloatingActionButton(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              onPressed: isConnected
+                  ? () {
+                      showDialog(
+                          context: context,
+                          builder: (context) =>
+                              LogoutDailog(email: emailController.text));
+                    }
+                  : () {
+                      ConstDialog(context).showErrorDialog(
+                        error: "Check Your Internet Connection",
+                        title: const Row(
+                          children: [
+                            Icon(Icons.error, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text("Alert"),
+                          ],
+                        ),
+                        iconColor: Colors.red,
+                      );
+                    },
+              child: const Icon(Icons.power_settings_new_rounded,
+                  color: Colors.deepOrange),
+            );
+          },
+        ));
   }
 
-  void startPostingData() async {
-    Timer? timer;
-    if (timer != null && timer.isActive) return;
+  Future<void> postAllRecordsToAPI(bool isConnected) async {
+    DatabaseHelper databaseHelper = DatabaseHelper.instance;
+    List<EmployeeAttendance> records =
+        await databaseHelper.getAllAttendanceRecord();
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 10),
+                Text("Please wait Data is Syncing..."),
+              ],
+            ),
+          );
+        },
+      );
+      await Future.delayed(const Duration(milliseconds: 200));
+      await databaseHelper.postDataToAPI(records).whenComplete(() {
+        deletePairwiseRecords();
+        Navigator.of(context, rootNavigator: true).pop();
+      });
+    } catch (e) {
+      log('Error posting data: $e');
+      // Handle errors here
+    }
+  }
 
-    // timer = Timer.periodic(const Duration(seconds: 5), (Timer t) async {
+  void deletePairwiseRecords() async {
     DatabaseHelper databaseHelper = DatabaseHelper.instance;
     List<EmployeeAttendance> records =
         await databaseHelper.getAllAttendanceRecord();
 
-    // Map to store in-progress "in" records by employee ID
     Map<int, EmployeeAttendance> inRecords = {};
 
     for (var record in records) {
       if (record.status == "in") {
-        if (inRecords.containsKey(record.employeeId)) {
-          if (DateTime.parse(record.date! + " " + record.time!).isAfter(
-              DateTime.parse(inRecords[record.employeeId]!.date! +
-                  " " +
-                  inRecords[record.employeeId]!.time!))) {
-            inRecords[int.parse(record.employeeId.toString())] = record;
-          }
-        } else {
-          inRecords[int.parse(record.employeeId.toString())] = record;
-        }
+        // Store "in" records
+        inRecords[int.parse(record.employeeId.toString())] = record;
       } else if (record.status == "out") {
         if (inRecords.containsKey(record.employeeId)) {
           EmployeeAttendance inRecord = inRecords[record.employeeId]!;
           try {
-            await databaseHelper.postDataToAPI(inRecord);
-            await databaseHelper.postDataToAPI(record);
             await databaseHelper.deleteAttendance(inRecord.employeeId!);
             await databaseHelper.deleteAttendance(record.employeeId!);
             inRecords.remove(record.employeeId);
           } catch (e) {
-            log('Error posting data: $e');
+            log('Error deleting data: $e');
             continue;
           }
         } else {
@@ -714,6 +778,4 @@ class _UserScreenState extends State<UserScreen> {
       }
     }
   }
-  // );
-  // }
 }
