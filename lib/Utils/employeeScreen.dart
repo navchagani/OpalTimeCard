@@ -61,7 +61,6 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
   void employeeAttendance({required BuildContext context}) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? userJson = prefs.getString('loggedInUser');
-    log('Employee not found with pin ${pinCode.text}');
 
     if (userJson != null) {
       Map<String, dynamic> userMap = jsonDecode(userJson);
@@ -70,20 +69,13 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
 
       bool pinMatch =
           employees!.any((employee) => employee.pin == pinCode.text);
-      log('Employee not found with pin ${pinCode.text}');
       if (pinMatch) {
-        log('Employee not found with pin ${pinCode.text}');
         Employees? matchedEmployee = employees.firstWhere(
           (employee) => employee.pin == pinCode.text,
           orElse: () {
-            log('Employee not found with pin ${pinCode.text}');
             return const Employees();
           },
         );
-        List<EmployeeAttendance> allAttendance =
-            await DatabaseHelper.instance.getAllAttendance();
-        log('All attendance records $allAttendance');
-
         EmployeeAttendance? lastAttendance = await DatabaseHelper.instance
             .getLastAttendance(matchedEmployee.pin!);
 
@@ -133,8 +125,8 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
                                   children: [
                                     Text(
                                       ' ${matchedEmployee.name ?? "Unknown"}',
-                                      style: const TextStyle(
-                                        fontSize: 25,
+                                      style: TextStyle(
+                                        fontSize: width < 700 ? 18 : 25,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.white,
                                       ),
@@ -293,7 +285,6 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
                 status: 'out',
               ),
             );
-            log('Attendance record updated for ${matchedEmployee.name}');
           });
           final player = AudioPlayer();
           await player.play(AssetSource('audios/out.mp3'));
@@ -327,8 +318,8 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
                                 padding: const EdgeInsets.all(10.0),
                                 child: Text(
                                   ' ${matchedEmployee.name ?? "Unknown"}',
-                                  style: const TextStyle(
-                                    fontSize: 25,
+                                  style: TextStyle(
+                                    fontSize: width < 700 ? 18 : 25,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),

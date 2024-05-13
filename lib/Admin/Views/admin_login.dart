@@ -2,8 +2,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -95,7 +93,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           prefs.setString('loggedInUser', userJson);
           prefs.setString('email', email);
           prefs.setString('password', pass);
-          log("Saving user data: $userJson");
 
           Navigator.pushReplacement(
             context,
@@ -118,7 +115,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     streamSubscription = ConnectionFuncs.checkInternetConnectivityStream()
         .asBroadcastStream()
         .listen((isConnected) {
-      log('$isConnected');
       if (mounted) {
         CheckConnection connection = BlocProvider.of<CheckConnection>(context);
         connection.add(isConnected);
@@ -276,15 +272,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
   Widget loginButton() {
     return BlocBuilder<CheckConnection, bool>(builder: (context, isConnected) {
-      log("connection: $isConnected");
-
       return CustomButton(
           text: "Login",
           isLoading: loggingIn,
           backgroundColor: const Color.fromARGB(255, 37, 84, 124),
           textColor: Colors.white,
           onTap: () {
-            log("connection: $isConnected");
             loginUser(context: context, isConnected: isConnected);
           });
     });

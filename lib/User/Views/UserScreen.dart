@@ -1,5 +1,3 @@
-// ignore_for_file: prefer_interpolation_to_compose_strings, unnecessary_null_comparison
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
@@ -44,7 +42,6 @@ class _UserScreenState extends State<UserScreen> {
   bool toggle = true;
   bool isProcessing = false;
   late StreamSubscription<bool> streamSubscription;
-  late Timer _timer;
   late TimeOfDay selectedTime;
 
   @override
@@ -64,7 +61,6 @@ class _UserScreenState extends State<UserScreen> {
         setState(() {
           isProcessing = true;
           result = scanData;
-          log("QRCode result: ${result!.code}");
         });
         toggle = !toggle;
         Future.delayed(const Duration(seconds: 1), () {
@@ -89,13 +85,9 @@ class _UserScreenState extends State<UserScreen> {
         Employees? matchedEmployee = employees.firstWhere(
           (employee) => employee.pin == result!.code,
           orElse: () {
-            log('Employee not found with pin ${result!.code}');
             return const Employees();
           },
         );
-        List<EmployeeAttendance> allAttendance =
-            await DatabaseHelper.instance.getAllAttendance();
-        log('All attendance records $allAttendance');
         EmployeeAttendance? lastAttendance = await DatabaseHelper.instance
             .getLastAttendance(matchedEmployee.pin!);
         if (lastAttendance != null && lastAttendance.status == 'in') {
@@ -144,8 +136,8 @@ class _UserScreenState extends State<UserScreen> {
                                   children: [
                                     Text(
                                       ' ${matchedEmployee.name ?? "Unknown"}',
-                                      style: const TextStyle(
-                                        fontSize: 25,
+                                      style: TextStyle(
+                                        fontSize: width < 700 ? 18 : 25,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.white,
                                       ),
@@ -304,7 +296,6 @@ class _UserScreenState extends State<UserScreen> {
                 status: 'out',
               ),
             );
-            log('Attendance record updated for ${matchedEmployee.name}');
           });
           final player = AudioPlayer();
           await player.play(AssetSource('audios/out.mp3'));
@@ -338,8 +329,8 @@ class _UserScreenState extends State<UserScreen> {
                                 padding: const EdgeInsets.all(10.0),
                                 child: Text(
                                   ' ${matchedEmployee.name ?? "Unknown"}',
-                                  style: const TextStyle(
-                                    fontSize: 25,
+                                  style: TextStyle(
+                                    fontSize: width < 700 ? 18 : 25,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),
@@ -529,21 +520,12 @@ class _UserScreenState extends State<UserScreen> {
       bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
       if (isConnected) {
         postAllRecordsToAPI(isConnected);
-      } else {
-        log("No internet connection.");
-      }
+      } else {}
     });
 
     _loadUserData();
     super.initState();
     selectedTime = TimeOfDay.now();
-    _timer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
-      if (mounted) {
-        setState(() {
-          selectedTime = TimeOfDay.now();
-        });
-      }
-    });
   }
 
   Future<void> _initPrefs() async {
@@ -554,15 +536,12 @@ class _UserScreenState extends State<UserScreen> {
     await _initPrefs();
     String? userJson = _prefs.getString('loggedInUser');
     if (userJson != null) {
-      log("Loaded user JSON: $userJson");
       setState(() {
         user = LoggedInUser.fromJson(jsonDecode(userJson));
         UserLocation = user?.locationId ?? '';
         emailController.text = user?.email ?? '';
       });
-    } else {
-      log("No user data found in SharedPreferences.");
-    }
+    } else {}
   }
 
   @override

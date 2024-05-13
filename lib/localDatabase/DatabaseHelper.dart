@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -18,13 +17,10 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'attendance_database.db');
-    log('Database path: $path');
     try {
       Database db = await openDatabase(path, version: 1, onCreate: _createDb);
-      log('Database opened successfully');
       return db;
     } catch (e) {
-      log('Error opening database: $e');
       throw 'Error opening database: $e';
     }
   }
@@ -42,12 +38,10 @@ class DatabaseHelper {
       status TEXT
     )
   ''');
-    log('Database table created successfully');
   }
 
   Future<int> insertAttendance(EmployeeAttendance record) async {
     Database db = await instance.database;
-    log("Inserting into database: $record");
     return await db.insert('attendance', record.toJson());
   }
 
@@ -66,7 +60,6 @@ class DatabaseHelper {
     List<Map<String, dynamic>> result = await db.query('attendance',
         where: 'pin = ?', whereArgs: [pin], orderBy: 'id DESC', limit: 1);
     if (result.isNotEmpty) {
-      log("Last attendance for pin $pin: ${result.first}");
       return EmployeeAttendance.fromJson(result.first);
     }
     return null;
@@ -81,7 +74,6 @@ class DatabaseHelper {
   Future<void> deleteAllRecords() async {
     Database db = await instance.database;
     await db.delete('attendance');
-    log('All records deleted from database');
   }
 
   Future<void> deleteAttendance(int id) async {
@@ -104,14 +96,9 @@ class DatabaseHelper {
         });
 
         if (response.statusCode == 200) {
-          log('Data posted successfully: ${data.toString()}');
           // await deleteAttendance(data.employeeId!);
-        } else {
-          log('Failed to post data: ${response.body}');
-        }
+        } else {}
       }
-    } catch (e) {
-      log('Error posting data: $e');
-    }
+    } catch (e) {}
   }
 }
