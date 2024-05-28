@@ -1,4 +1,8 @@
+import 'dart:developer';
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:opaltimecard/Admin/Services/loginService.dart';
 import 'package:opaltimecard/Admin/Views/admin_login.dart';
 import 'package:opaltimecard/Utils/button.dart';
@@ -21,6 +25,29 @@ class _LogoutDailogState extends State<LogoutDailog> {
   bool _isObscure = true;
   bool loggingIn = false;
   late SharedPreferences _prefs;
+  String? modelName;
+
+  Future<String?> getMacAddress() async {
+    try {
+      final networkInfo = NetworkInfo();
+      String? wifiBSSID = await networkInfo.getWifiBSSID();
+      return wifiBSSID;
+    } catch (e) {
+      log("Error getting WiFi BSSID: $e");
+      return null;
+    }
+  }
+
+  Future<Map<String, String>> getDeviceInfo() async {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    modelName = androidInfo.model;
+
+    return {
+      // 'serialNumber': serialNo ?? '',
+      'modelName': modelName ?? '',
+    };
+  }
 
   @override
   void initState() {
@@ -33,19 +60,22 @@ class _LogoutDailogState extends State<LogoutDailog> {
   }
 
   void loginUser({required BuildContext context}) async {
+    Map<String, String> deviceInfo = await getDeviceInfo();
+    modelName = deviceInfo['modelName'] ?? 'Unknown';
+    String? macAddress = await getMacAddress();
     String email = emailController.text;
     String pass = passwordController.text;
     setState(() {
       loggingIn = true;
     });
     try {
-      final Map<String, dynamic> response =
-          await _authService.loginUser(context, email, pass);
+      final Map<String, dynamic> response = await _authService.loginUser(
+          context, email, pass, modelName.toString(), macAddress.toString());
       if (response['success'] == true) {
         await _prefs.clear();
         Navigator.of(context).pop();
         Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => AdminLoginScreen()));
+            MaterialPageRoute(builder: (context) => const AdminLoginScreen()));
       } else {
         ConstDialog(context).showErrorDialog(error: response['error']['info']);
       }

@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/User/Modal/EmployeeData.dart';
 import 'package:opaltimecard/User/Services/userService.dart';
@@ -43,6 +45,8 @@ class _UserScreenState extends State<UserScreen> {
   bool isProcessing = false;
   late StreamSubscription<bool> streamSubscription;
   late TimeOfDay selectedTime;
+  String? modelName;
+  String? deviceMACAddress;
 
   @override
   void reassemble() {
@@ -518,15 +522,45 @@ class _UserScreenState extends State<UserScreen> {
 
     Timer.periodic(const Duration(minutes: 30), (Timer timer) async {
       bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
-      if (isConnected) {
-        postAllRecordsToAPI(isConnected);
+      DatabaseHelper databaseHelper = DatabaseHelper.instance;
+      List<EmployeeAttendance> records =
+          await databaseHelper.getAllAttendanceRecord();
+      log('all records : $records');
+
+      if (isConnected && records.isNotEmpty) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return const AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 10),
+                  Text("Please wait Data is Syncing..."),
+                ],
+              ),
+            );
+          },
+        );
+        postAllRecordsToAPI();
       } else {}
     });
 
     _loadUserData();
+    // _initDeviceInfo();
     super.initState();
     selectedTime = TimeOfDay.now();
   }
+
+  // Future<void> _initDeviceInfo() async {
+  //   Map<String, String> deviceInfo = await getDeviceInfo();
+  //   String modelName = deviceInfo['modelName'] ?? 'Unknown';
+  //   String? macAddress = await getMacAddress();
+  //   log('Model Name: $modelName');
+  //   log('MAC Address: $macAddress');
+  // }
 
   Future<void> _initPrefs() async {
     _prefs = await SharedPreferences.getInstance();
@@ -670,26 +704,29 @@ class _UserScreenState extends State<UserScreen> {
             return FloatingActionButton(
               backgroundColor: Colors.white,
               foregroundColor: Colors.black,
-              onPressed: isConnected
-                  ? () {
-                      showDialog(
-                          context: context,
-                          builder: (context) =>
-                              LogoutDailog(email: emailController.text));
-                    }
-                  : () {
-                      ConstDialog(context).showErrorDialog(
-                        error: "Check Your Internet Connection",
-                        title: const Row(
-                          children: [
-                            Icon(Icons.error, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text("Alert"),
-                          ],
-                        ),
-                        iconColor: Colors.red,
-                      );
-                    },
+              onPressed: () {
+                // _initDeviceInfo();
+                isConnected
+                    ? () {
+                        showDialog(
+                            context: context,
+                            builder: (context) =>
+                                LogoutDailog(email: emailController.text));
+                      }
+                    : () {
+                        ConstDialog(context).showErrorDialog(
+                          error: "Check Your Internet Connection",
+                          title: const Row(
+                            children: [
+                              Icon(Icons.error, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text("Alert"),
+                            ],
+                          ),
+                          iconColor: Colors.red,
+                        );
+                      };
+              },
               child: const Icon(Icons.power_settings_new_rounded,
                   color: Colors.deepOrange),
             );
@@ -697,27 +734,12 @@ class _UserScreenState extends State<UserScreen> {
         ));
   }
 
-  Future<void> postAllRecordsToAPI(bool isConnected) async {
+  postAllRecordsToAPI() async {
     DatabaseHelper databaseHelper = DatabaseHelper.instance;
     List<EmployeeAttendance> records =
         await databaseHelper.getAllAttendanceRecord();
+    log('all records : $records');
     try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 10),
-                Text("Please wait Data is Syncing..."),
-              ],
-            ),
-          );
-        },
-      );
       await Future.delayed(const Duration(milliseconds: 200));
       await databaseHelper.postDataToAPI(records).whenComplete(() {
         deletePairwiseRecords();
@@ -725,7 +747,6 @@ class _UserScreenState extends State<UserScreen> {
       });
     } catch (e) {
       log('Error posting data: $e');
-      // Handle errors here
     }
   }
 
@@ -733,12 +754,9 @@ class _UserScreenState extends State<UserScreen> {
     DatabaseHelper databaseHelper = DatabaseHelper.instance;
     List<EmployeeAttendance> records =
         await databaseHelper.getAllAttendanceRecord();
-
     Map<int, EmployeeAttendance> inRecords = {};
-
     for (var record in records) {
       if (record.status == "in") {
-        // Store "in" records
         inRecords[int.parse(record.employeeId.toString())] = record;
       } else if (record.status == "out") {
         if (inRecords.containsKey(record.employeeId)) {

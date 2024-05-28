@@ -5,11 +5,13 @@ import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/Utils/customDailoge.dart';
 
 class AuthService {
-  Future<Map<String, dynamic>> loginUser(
-      BuildContext context, String email, String password) async {
+  Future<Map<String, dynamic>> loginUser(BuildContext context, String email,
+      String password, String modelName, String macAddress) async {
     final body = {
       'email': email,
       'password': password,
+      'model_name': modelName,
+      'mac_address': macAddress
     };
 
     try {
@@ -43,7 +45,7 @@ class AuthService {
         return {'success': false, 'error': errorMessage};
       }
     } catch (e) {
-      ConstDialog(context).showErrorDialog(error: 'Network error: $e');
+      // ConstDialog(context).showErrorDialog(error: 'Network error: $e');
       return {'success': false, 'error': 'Network error: $e'};
     }
   }

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -96,8 +98,10 @@ class DatabaseHelper {
         });
 
         if (response.statusCode == 200) {
-          // await deleteAttendance(data.employeeId!);
-        } else {}
+          log('Data posted successfully: ${data.toString()}');
+        } else {
+          log('Failed to post data: ${response.body}');
+        }
       }
     } catch (e) {}
   }

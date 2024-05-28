@@ -4,8 +4,11 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:connectivity/connectivity.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/User/Modal/EmployeeData.dart';
 import 'package:opaltimecard/User/Services/userService.dart';
@@ -31,14 +34,13 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
 
   @override
   void initState() {
-    super.initState();
-
     pinFocusNode.addListener(() {
       if (!pinFocusNode.hasFocus) {
         pinCode.clear();
         log('Employee not found with pin ${pinCode.text}');
       }
     });
+    super.initState();
   }
 
   void calculation(btnText) {
@@ -468,13 +470,11 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
                     const SizedBox(
                       width: 20,
                     ),
-                    Text(
-                      "Invalid User",
-                      style: TextStyle(
-                          color: Colors.red,
-                          fontSize: width < 700 ? 20 : 25,
-                          fontWeight: FontWeight.bold),
-                    )
+                    Text("Invalid User",
+                        style: TextStyle(
+                            color: Colors.red,
+                            fontSize: width < 700 ? 20 : 25,
+                            fontWeight: FontWeight.bold))
                   ],
                 ),
               ),

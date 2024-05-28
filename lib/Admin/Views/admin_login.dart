@@ -2,9 +2,12 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/Admin/Services/loginService.dart';
 import 'package:opaltimecard/User/Views/UserScreen.dart';
@@ -27,15 +30,40 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   bool _isObscure = true;
   bool loggingIn = false;
   final AuthService _authService = AuthService();
-
+  String? modelName;
+  String? deviceMACAddress;
   late StreamSubscription<bool> streamSubscription;
   TextEditingController emailaddress = TextEditingController();
   TextEditingController password = TextEditingController();
+  Future<String?> getMacAddress() async {
+    try {
+      final networkInfo = NetworkInfo();
+      String? wifiBSSID = await networkInfo.getWifiBSSID();
+      return wifiBSSID;
+    } catch (e) {
+      log("Error getting WiFi BSSID: $e");
+      return null;
+    }
+  }
+
+  Future<Map<String, String>> getDeviceInfo() async {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    modelName = androidInfo.model;
+
+    return {
+      'modelName': modelName ?? '',
+    };
+  }
 
   Future<void> loginUser(
       {required BuildContext context, required bool isConnected}) async {
     String email = emailaddress.text;
     String pass = password.text;
+
+    Map<String, String> deviceInfo = await getDeviceInfo();
+    String modelName = deviceInfo['modelName'] ?? 'Unknown';
+    String? macAddress = await getMacAddress();
     if (!isConnected) {
       // Show dialog for no internet connection
       showDialog(
@@ -74,36 +102,38 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       if (emailaddress.text.isEmpty || password.text.isEmpty) {
         ConstDialog(context)
             .showErrorDialog(error: 'Please enter both username and password.');
-      }
-      try {
-        final Map<String, dynamic> response = await _authService.loginUser(
-          context,
-          emailaddress.text.trim(),
-          password.text.trim(),
-        );
+      } else {
+        try {
+          final Map<String, dynamic> response = await _authService.loginUser(
+              context,
+              emailaddress.text.trim(),
+              password.text.trim(),
+              modelName,
+              macAddress.toString());
 
-        if (response['success'] == true) {
-          LoggedInUser loggedInUser = LoggedInUser.fromJson(response['data']);
+          if (response['success'] == true) {
+            LoggedInUser loggedInUser = LoggedInUser.fromJson(response['data']);
 
-          UserBloc userBloc = BlocProvider.of<UserBloc>(context);
-          userBloc.add(loggedInUser);
+            UserBloc userBloc = BlocProvider.of<UserBloc>(context);
+            userBloc.add(loggedInUser);
 
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          String userJson = jsonEncode(loggedInUser.toJson());
-          prefs.setString('loggedInUser', userJson);
-          prefs.setString('email', email);
-          prefs.setString('password', pass);
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            String userJson = jsonEncode(loggedInUser.toJson());
+            prefs.setString('loggedInUser', userJson);
+            prefs.setString('email', email);
+            prefs.setString('password', pass);
 
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const UserScreen()),
-          );
-        } else {}
-      } catch (e) {}
-      if (mounted) {
-        setState(() {
-          loggingIn = false;
-        });
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const UserScreen()),
+            );
+          } else {}
+        } catch (e) {}
+        if (mounted) {
+          setState(() {
+            loggingIn = false;
+          });
+        }
       }
     }
   }
@@ -272,14 +302,25 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
   Widget loginButton() {
     return BlocBuilder<CheckConnection, bool>(builder: (context, isConnected) {
-      return CustomButton(
-          text: "Login",
-          isLoading: loggingIn,
-          backgroundColor: const Color.fromARGB(255, 37, 84, 124),
-          textColor: Colors.white,
-          onTap: () {
-            loginUser(context: context, isConnected: isConnected);
-          });
+      if (emailaddress.text.isEmpty || password.text.isEmpty) {
+        return CustomButton(
+            text: "Login",
+            isLoading: false,
+            backgroundColor: const Color.fromARGB(255, 37, 84, 124),
+            textColor: Colors.white,
+            onTap: () {
+              loginUser(context: context, isConnected: isConnected);
+            });
+      } else {
+        return CustomButton(
+            text: "Login",
+            isLoading: loggingIn,
+            backgroundColor: const Color.fromARGB(255, 37, 84, 124),
+            textColor: Colors.white,
+            onTap: () {
+              loginUser(context: context, isConnected: isConnected);
+            });
+      }
     });
   }
 }
