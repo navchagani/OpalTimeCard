@@ -4,20 +4,16 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:audioplayers/audioplayers.dart';
-import 'package:connectivity/connectivity.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:network_info_plus/network_info_plus.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/User/Modal/EmployeeData.dart';
-import 'package:opaltimecard/User/Services/userService.dart';
 import 'package:opaltimecard/localDatabase/DatabaseHelper.dart';
 import 'package:pinput/pinput.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EmployeeScreen extends StatefulWidget {
-  const EmployeeScreen({Key? key}) : super(key: key);
+  const EmployeeScreen({super.key});
 
   @override
   State<EmployeeScreen> createState() => _EmployeeScreenState();
@@ -25,7 +21,7 @@ class EmployeeScreen extends StatefulWidget {
 
 class _EmployeeScreenState extends State<EmployeeScreen> {
   TextEditingController pinCode = TextEditingController();
-  UserService userService = UserService();
+  // UserService userService = UserService();
   List<LoggedInUser>? currentUser;
   List<EmployeeAttendance> attendanceList = [];
 

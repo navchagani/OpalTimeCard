@@ -1,17 +1,16 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:network_info_plus/network_info_plus.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/User/Modal/EmployeeData.dart';
-import 'package:opaltimecard/User/Services/userService.dart';
 import 'package:opaltimecard/User/Views/logoutDailog.dart';
 import 'package:opaltimecard/Utils/customDailoge.dart';
 import 'package:opaltimecard/Utils/employeeScreen.dart';
@@ -33,7 +32,6 @@ class _UserScreenState extends State<UserScreen> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   Barcode? result;
   QRViewController? controller;
-  UserService userService = UserService();
   bool attendance = false;
   List<LoggedInUser>? currentUser;
   List<EmployeeAttendance> attendanceList = [];
