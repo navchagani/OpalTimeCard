@@ -5,9 +5,12 @@ import 'dart:developer';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/User/Modal/EmployeeData.dart';
+import 'package:opaltimecard/connectivity.dart';
 import 'package:opaltimecard/localDatabase/DatabaseHelper.dart';
 import 'package:pinput/pinput.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,6 +24,8 @@ class EmployeeScreen extends StatefulWidget {
 
 class _EmployeeScreenState extends State<EmployeeScreen> {
   TextEditingController pinCode = TextEditingController();
+  TextEditingController locationController = TextEditingController();
+
   // UserService userService = UserService();
   List<LoggedInUser>? currentUser;
   List<EmployeeAttendance> attendanceList = [];
@@ -37,6 +42,47 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
       }
     });
     super.initState();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    // Get current position
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+
+    // Reverse geocoding
+    List<Placemark> placemarks =
+        await placemarkFromCoordinates(position.latitude, position.longitude);
+
+    // Update UI with the address
+    setState(() {
+      if (placemarks != null && placemarks.isNotEmpty) {
+        Placemark placemark = placemarks[0];
+        locationController.text =
+            '${placemark.name}, ${placemark.subLocality}, ${placemark.locality} ${placemark.postalCode}, ${placemark.administrativeArea}, ${placemark.country}';
+        log("Location: ${locationController.text}");
+      } else {
+        locationController.text = 'Address not found';
+      }
+    });
   }
 
   void calculation(btnText) {
@@ -272,6 +318,8 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
               );
             },
           ).whenComplete(() async {
+            bool isConnected =
+                await ConnectionFuncs.checkInternetConnectivity();
             String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
             String currentDate =
                 DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -281,8 +329,27 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
                 date: currentDate,
                 uid: loggedInUser.uid,
                 status: 'out',
+                businessId: loggedInUser.businessId,
+                currentLocation: locationController.text,
               ),
             );
+            EmployeeAttendance attendanceRecord = EmployeeAttendance(
+              employeeId: matchedEmployee.id,
+              employeeName: matchedEmployee.name,
+              pin: matchedEmployee.pin,
+              time: currentTime,
+              date: currentDate,
+              uid: loggedInUser.uid,
+              status: 'out',
+              businessId: loggedInUser.businessId,
+              currentLocation: locationController.text,
+            );
+            if (isConnected) {
+              DatabaseHelper databaseHelper = DatabaseHelper.instance;
+              await databaseHelper.postSingleDataToAPI(attendanceRecord);
+            } else {
+              return;
+            }
           });
           final player = AudioPlayer();
           await player.play(AssetSource('audios/out.mp3'));
@@ -363,6 +430,9 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
               );
             },
           ).whenComplete(() async {
+            bool isConnected =
+                await ConnectionFuncs.checkInternetConnectivity();
+
             String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
             String currentDate =
                 DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -374,13 +444,23 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
               date: currentDate,
               uid: loggedInUser.uid,
               status: 'in',
+              businessId: loggedInUser.businessId,
+              currentLocation: locationController.text,
             );
             int id = await DatabaseHelper.instance
                 .insertAttendance(attendanceRecord);
             log('Attendance record inserted with ID: $id');
+            if (isConnected) {
+              DatabaseHelper databaseHelper = DatabaseHelper.instance;
+              await databaseHelper.postSingleDataToAPI(attendanceRecord);
+            } else {
+              return;
+            }
           });
+
           final player = AudioPlayer();
           await player.play(AssetSource('audios/in.mp3'));
+
           Future.delayed(const Duration(seconds: 5), () {
             Navigator.of(context, rootNavigator: true).pop();
           });
@@ -580,6 +660,7 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
                       readOnly: true,
                       onCompleted: (value) {
                         employeeAttendance(context: context);
+                        _getCurrentLocation();
                       }),
                 ),
               ),

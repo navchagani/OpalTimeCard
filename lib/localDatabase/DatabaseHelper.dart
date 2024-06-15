@@ -1,5 +1,5 @@
+import 'dart:convert';
 import 'dart:developer';
-
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -20,7 +20,8 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'attendance_database.db');
     try {
-      Database db = await openDatabase(path, version: 1, onCreate: _createDb);
+      Database db = await openDatabase(path,
+          version: 3, onCreate: _createDb, onUpgrade: _upgradeDb);
       return db;
     } catch (e) {
       throw 'Error opening database: $e';
@@ -29,17 +30,33 @@ class DatabaseHelper {
 
   Future<void> _createDb(Database db, int version) async {
     await db.execute('''
-    CREATE TABLE attendance(
-      id INTEGER PRIMARY KEY,
-      employee_id INTEGER,
-      employee_name TEXT,
-      pin TEXT,
-      time TEXT,
-      date TEXT,
-      uid TEXT,
-      status TEXT
-    )
-  ''');
+      CREATE TABLE attendance(
+        id INTEGER PRIMARY KEY,
+        employee_id INTEGER,
+        business_id TEXT,
+        employee_name TEXT,
+        location TEXT,
+        pin TEXT,
+        time TEXT,
+        date TEXT,
+        uid TEXT,
+        status TEXT,
+        current_location TEXT
+      )
+    ''');
+  }
+
+  Future<void> _upgradeDb(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        ALTER TABLE attendance ADD COLUMN businessId TEXT
+      ''');
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        ALTER TABLE attendance ADD COLUMN current_location TEXT
+      ''');
+    }
   }
 
   Future<int> insertAttendance(EmployeeAttendance record) async {
@@ -90,11 +107,13 @@ class DatabaseHelper {
       for (var data in dataList) {
         var response = await http.post(url, body: {
           'pin': data.pin,
+          'business_id': data.businessId,
           'empid': data.employeeId.toString(),
           'date': data.date,
           'time': data.time,
           'status': data.status,
-          'uid': data.uid
+          'uid': data.uid,
+          'current_location': data.currentLocation
         });
 
         if (response.statusCode == 200) {
@@ -103,6 +122,62 @@ class DatabaseHelper {
           log('Failed to post data: ${response.body}');
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      log('Error posting data: $e');
+    }
+  }
+
+  Future<void> postSingleDataToAPI(EmployeeAttendance data) async {
+    try {
+      var url = Uri.parse('https://opaltimecard.com/api/markofflineattandence');
+
+      var response = await http.post(url, body: {
+        'pin': data.pin,
+        'business_id': data.businessId,
+        'empid': data.employeeId.toString(),
+        'date': data.date,
+        'time': data.time,
+        'status': data.status,
+        'uid': data.uid,
+        'current_location': data.currentLocation
+      });
+
+      if (response.statusCode == 200) {
+        log('Data posted successfully: ${data.toString()} ${response.body}');
+        var responseBody = jsonDecode(response.body);
+        if (responseBody['success'] == "true") {
+          Database db = await instance.database;
+
+          if (data.status == "out") {
+            List<Map<String, dynamic>> inRecords = await db.query('attendance',
+                where: 'employee_id = ? AND status = ?',
+                whereArgs: [data.employeeId, 'in'],
+                orderBy: 'id DESC',
+                limit: 1);
+
+            if (inRecords.isNotEmpty) {
+              var inRecord = EmployeeAttendance.fromJson(inRecords.first);
+              log('Found matching "in" record: $inRecord');
+              await db.delete('attendance',
+                  where: 'employee_id = ?', whereArgs: [inRecord.employeeId]);
+              await db.delete('attendance',
+                  where: 'employee_id = ?', whereArgs: [data.employeeId]);
+
+              log('Deleted matching "in" and "out" records for employeeId: ${data.employeeId}');
+            } else {
+              log('No matching "in" record found for "out" record: $data');
+            }
+          } else {
+            log('Received "in" record, no deletion needed.');
+          }
+        } else {
+          log('API response success is false: ${response.body}');
+        }
+      } else {
+        log('Failed to post data: ${response.body}');
+      }
+    } catch (e) {
+      log('Error posting data: $e');
+    }
   }
 }

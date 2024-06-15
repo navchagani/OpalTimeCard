@@ -1,31 +1,42 @@
 class LoggedInUser {
-  final String? uid;
-  final String? username;
-  final String? email;
-  final String? locationId;
-  final List<Employees>? employees;
-  const LoggedInUser(
-      {this.uid, this.username, this.email, this.locationId, this.employees});
+  String? businessId;
+  String? uid;
+  String? username;
+  String? email;
+  String? businessName;
+  List<Employees>? employees;
+
+  LoggedInUser(
+      {this.businessId,
+      this.uid,
+      this.username,
+      this.email,
+      this.businessName,
+      this.employees});
+
   LoggedInUser copyWith(
       {String? uid,
+      String? businessId,
       String? username,
       String? email,
-      String? locationId,
+      String? businessName,
       List<Employees>? employees}) {
     return LoggedInUser(
+        businessId: businessId ?? this.businessId,
         uid: uid ?? this.uid,
         username: username ?? this.username,
         email: email ?? this.email,
-        locationId: locationId ?? this.locationId,
+        businessName: businessName ?? this.businessName,
         employees: employees ?? this.employees);
   }
 
   Map<String, Object?> toJson() {
     return {
       'uid': uid,
+      'business_id': businessId,
       'username': username,
       'email': email,
-      'location_id': locationId,
+      'business_name': businessName,
       'employees':
           employees?.map<Map<String, dynamic>>((data) => data.toJson()).toList()
     };
@@ -34,10 +45,13 @@ class LoggedInUser {
   static LoggedInUser fromJson(Map<String, Object?> json) {
     return LoggedInUser(
         uid: json['uid'] == null ? null : json['uid'] as String,
+        businessId:
+            json['business_id'] == null ? null : json['business_id'] as String,
         username: json['username'] == null ? null : json['username'] as String,
         email: json['email'] == null ? null : json['email'] as String,
-        locationId:
-            json['location_id'] == null ? null : json['location_id'] as String,
+        businessName: json['business_name'] == null
+            ? null
+            : json['business_name'] as String,
         employees: json['employees'] == null
             ? null
             : (json['employees'] as List)
@@ -50,10 +64,11 @@ class LoggedInUser {
   String toString() {
     return '''LoggedInUser(
                 uid:$uid,
-username:$username,
-email:$email,
-locationId:$locationId,
-employees:${employees.toString()}
+                business_id:$businessId,
+                username:$username,
+                email:$email,
+                business_name:$businessName,
+                employees:${employees.toString()}
     ) ''';
   }
 
@@ -62,16 +77,17 @@ employees:${employees.toString()}
     return other is LoggedInUser &&
         other.runtimeType == runtimeType &&
         other.uid == uid &&
+        other.businessId == businessId &&
         other.username == username &&
         other.email == email &&
-        other.locationId == locationId &&
+        other.businessName == businessName &&
         other.employees == employees;
   }
 
   @override
   int get hashCode {
     return Object.hash(
-        runtimeType, uid, username, email, locationId, employees);
+        runtimeType, uid, businessId, username, email, businessName, employees);
   }
 }
 

@@ -1,4 +1,4 @@
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, use_build_context_synchronously
 
 import 'dart:async';
 import 'dart:convert';
@@ -8,6 +8,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/User/Modal/EmployeeData.dart';
@@ -29,6 +31,7 @@ class UserScreen extends StatefulWidget {
 class _UserScreenState extends State<UserScreen> {
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
+  TextEditingController locationController = TextEditingController();
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   Barcode? result;
   QRViewController? controller;
@@ -287,6 +290,8 @@ class _UserScreenState extends State<UserScreen> {
               );
             },
           ).whenComplete(() async {
+            bool isConnected =
+                await ConnectionFuncs.checkInternetConnectivity();
             String currentTime = DateFormat('HH:mm').format(DateTime.now());
             String currentDate =
                 DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -296,8 +301,27 @@ class _UserScreenState extends State<UserScreen> {
                 date: currentDate,
                 uid: loggedInUser.uid,
                 status: 'out',
+                businessId: loggedInUser.businessId,
+                currentLocation: locationController.text,
               ),
             );
+            EmployeeAttendance attendanceRecord = EmployeeAttendance(
+              employeeId: matchedEmployee.id,
+              employeeName: matchedEmployee.name,
+              pin: matchedEmployee.pin,
+              time: currentTime,
+              date: currentDate,
+              uid: loggedInUser.uid,
+              status: 'out',
+              businessId: loggedInUser.businessId,
+              currentLocation: locationController.text,
+            );
+            if (isConnected) {
+              DatabaseHelper databaseHelper = DatabaseHelper.instance;
+              await databaseHelper.postSingleDataToAPI(attendanceRecord);
+            } else {
+              return;
+            }
           });
           final player = AudioPlayer();
           await player.play(AssetSource('audios/out.mp3'));
@@ -378,20 +402,31 @@ class _UserScreenState extends State<UserScreen> {
               );
             },
           ).whenComplete(() async {
+            bool isConnected =
+                await ConnectionFuncs.checkInternetConnectivity();
             String currentTime = DateFormat('HH:mm').format(DateTime.now());
             String currentDate =
                 DateFormat('yyyy-MM-dd').format(DateTime.now());
             EmployeeAttendance attendanceRecord = EmployeeAttendance(
-                employeeId: matchedEmployee.id,
-                employeeName: matchedEmployee.name,
-                pin: matchedEmployee.pin,
-                time: currentTime,
-                date: currentDate,
-                status: 'in',
-                uid: loggedInUser.uid);
+              employeeId: matchedEmployee.id,
+              employeeName: matchedEmployee.name,
+              pin: matchedEmployee.pin,
+              time: currentTime,
+              date: currentDate,
+              status: 'in',
+              uid: loggedInUser.uid,
+              businessId: loggedInUser.businessId,
+              currentLocation: locationController.text,
+            );
             int id = await DatabaseHelper.instance
                 .insertAttendance(attendanceRecord);
             log('Attendance record inserted with ID: $id');
+            if (isConnected) {
+              DatabaseHelper databaseHelper = DatabaseHelper.instance;
+              await databaseHelper.postSingleDataToAPI(attendanceRecord);
+            } else {
+              return;
+            }
           });
           final player = AudioPlayer();
           await player.play(AssetSource('audios/in.mp3'));
@@ -507,6 +542,7 @@ class _UserScreenState extends State<UserScreen> {
 
   @override
   void initState() {
+    _getCurrentLocation();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky,
         overlays: [SystemUiOverlay.bottom]);
 
@@ -518,7 +554,7 @@ class _UserScreenState extends State<UserScreen> {
       connection.add(isConnected);
     });
 
-    Timer.periodic(const Duration(minutes: 30), (Timer timer) async {
+    Timer.periodic(const Duration(minutes: 2), (Timer timer) async {
       bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
       DatabaseHelper databaseHelper = DatabaseHelper.instance;
       List<EmployeeAttendance> records =
@@ -526,32 +562,67 @@ class _UserScreenState extends State<UserScreen> {
       log('all records : $records');
 
       if (isConnected && records.isNotEmpty) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (BuildContext context) {
-            return const AlertDialog(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 10),
-                  Text("Please wait Data is Syncing..."),
-                ],
-              ),
-            );
-          },
-        );
-        postAllRecordsToAPI();
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(
+        //     backgroundColor: Color.fromRGBO(30, 60, 87, 1),
+        //     content: Text(
+        //       'Syncing...',
+        //       style:
+        //           TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        //     ),
+        //     duration: Duration(seconds: 3),
+        //   ),
+        // );
+
+        await postAllRecordsToAPI(context);
       } else {}
     });
-
     _loadUserData();
     // _initDeviceInfo();
     super.initState();
     selectedTime = TimeOfDay.now();
   }
 
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    // Get current position
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+
+    // Reverse geocoding
+    List<Placemark> placemarks =
+        await placemarkFromCoordinates(position.latitude, position.longitude);
+
+    // Update UI with the address
+    setState(() {
+      if (placemarks != null && placemarks.isNotEmpty) {
+        Placemark placemark = placemarks[0];
+        locationController.text =
+            '${placemark.name}, ${placemark.subLocality}, ${placemark.locality} ${placemark.postalCode}, ${placemark.administrativeArea}, ${placemark.country}';
+        log("Location: ${locationController.text}");
+      } else {
+        locationController.text = 'Address not found';
+      }
+    });
+  }
   // Future<void> _initDeviceInfo() async {
   //   Map<String, String> deviceInfo = await getDeviceInfo();
   //   String modelName = deviceInfo['modelName'] ?? 'Unknown';
@@ -570,7 +641,7 @@ class _UserScreenState extends State<UserScreen> {
     if (userJson != null) {
       setState(() {
         user = LoggedInUser.fromJson(jsonDecode(userJson));
-        UserLocation = user?.locationId ?? '';
+        UserLocation = user?.businessName ?? '';
         emailController.text = user?.email ?? '';
       });
     } else {}
@@ -664,87 +735,107 @@ class _UserScreenState extends State<UserScreen> {
     double height = MediaQuery.of(context).size.height;
     double width = MediaQuery.of(context).size.width;
     return Scaffold(
-        backgroundColor: const Color.fromARGB(255, 29, 29, 29),
-        body: Center(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  UserLocation,
-                  style: TextStyle(
-                    fontSize: width > 600 ? 30 : 20,
-                    color: const Color.fromARGB(255, 177, 149, 226),
+      backgroundColor: const Color.fromARGB(255, 29, 29, 29),
+      body: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                UserLocation,
+                style: TextStyle(
+                  fontSize: width > 600 ? 30 : 20,
+                  color: const Color.fromARGB(255, 177, 149, 226),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              Text(
+                time,
+                style: const TextStyle(
+                    fontSize: 50,
                     fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  time,
-                  style: const TextStyle(
-                      fontSize: 50,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white),
-                ),
-                Text(
-                  date,
-                  style: TextStyle(
-                      fontSize: width > 600 ? 30 : 20, color: Colors.white),
-                ),
-                SizedBox(height: height > 768 ? height / 20 : height / 30),
-                userAttendance(),
-              ],
-            ),
+                    color: Colors.white),
+              ),
+              Text(
+                date,
+                style: TextStyle(
+                    fontSize: width > 600 ? 30 : 20, color: Colors.white),
+              ),
+              SizedBox(height: height > 768 ? height / 20 : height / 30),
+              userAttendance(),
+            ],
           ),
         ),
-        floatingActionButton: BlocBuilder<CheckConnection, bool>(
-          builder: (context, isConnected) {
-            return FloatingActionButton(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
-              onPressed: () {
-                // _initDeviceInfo();
-                isConnected
-                    ? () {
-                        showDialog(
-                            context: context,
-                            builder: (context) =>
-                                LogoutDailog(email: emailController.text));
-                      }
-                    : () {
-                        ConstDialog(context).showErrorDialog(
-                          error: "Check Your Internet Connection",
-                          title: const Row(
-                            children: [
-                              Icon(Icons.error, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text("Alert"),
-                            ],
-                          ),
-                          iconColor: Colors.red,
-                        );
-                      };
-              },
-              child: const Icon(Icons.power_settings_new_rounded,
-                  color: Colors.deepOrange),
-            );
-          },
-        ));
+      ),
+      floatingActionButton: BlocBuilder<CheckConnection, bool>(
+        builder: (context, isConnected) {
+          return FloatingActionButton(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            onPressed: () {
+              log('status:$isConnected');
+              if (isConnected) {
+                showDialog(
+                  context: context,
+                  builder: (context) =>
+                      LogoutDailog(email: emailController.text),
+                );
+              } else {
+                ConstDialog(context).showErrorDialog(
+                  error: "Check Your Internet Connection",
+                  title: const Row(
+                    children: [
+                      Icon(Icons.error, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text("Alert"),
+                    ],
+                  ),
+                  iconColor: Colors.red,
+                );
+              }
+            },
+            child: const Icon(Icons.power_settings_new_rounded,
+                color: Colors.deepOrange),
+          );
+        },
+      ),
+    );
   }
 
-  postAllRecordsToAPI() async {
+  Future<void> postAllRecordsToAPI(BuildContext context) async {
     DatabaseHelper databaseHelper = DatabaseHelper.instance;
     List<EmployeeAttendance> records =
         await databaseHelper.getAllAttendanceRecord();
     log('all records : $records');
+
+    // Show a SnackBar indicating data syncing
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Color.fromRGBO(30, 60, 87, 1),
+        content: Text(
+          'Syncing...',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+
     try {
       await Future.delayed(const Duration(milliseconds: 200));
-      await databaseHelper.postDataToAPI(records).whenComplete(() {
-        deletePairwiseRecords();
-        Navigator.of(context, rootNavigator: true).pop();
-      });
+      await databaseHelper.postDataToAPI(records).whenComplete(
+            () => deletePairwiseRecords(),
+          );
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
     } catch (e) {
       log('Error posting data: $e');
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error syncing data. Please try again later.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 
