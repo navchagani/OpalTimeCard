@@ -41,7 +41,8 @@ class DatabaseHelper {
         date TEXT,
         uid TEXT,
         status TEXT,
-        current_location TEXT
+        current_location TEXT,
+        department_id TEXT
       )
     ''');
   }
@@ -55,6 +56,11 @@ class DatabaseHelper {
     if (oldVersion < 3) {
       await db.execute('''
         ALTER TABLE attendance ADD COLUMN current_location TEXT
+      ''');
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        ALTER TABLE attendance ADD COLUMN department_id TEXT
       ''');
     }
   }
@@ -113,7 +119,8 @@ class DatabaseHelper {
           'time': data.time,
           'status': data.status,
           'uid': data.uid,
-          'current_location': data.currentLocation
+          'current_location': data.currentLocation,
+          'department_id': data.departmentId
         });
 
         if (response.statusCode == 200) {
@@ -139,9 +146,9 @@ class DatabaseHelper {
         'time': data.time,
         'status': data.status,
         'uid': data.uid,
-        'current_location': data.currentLocation
+        'current_location': data.currentLocation,
+        'department_id': data.departmentId
       });
-
       if (response.statusCode == 200) {
         log('Data posted successfully: ${data.toString()} ${response.body}');
         var responseBody = jsonDecode(response.body);

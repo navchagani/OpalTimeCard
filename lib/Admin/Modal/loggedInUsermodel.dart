@@ -1,74 +1,84 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class LoggedInUser {
-  String? businessId;
-  String? uid;
-  String? username;
-  String? email;
-  String? businessName;
-  List<Employees>? employees;
+  final String? uid;
+  final String? username;
+  final String? email;
+  final String? businessName;
+  final String? businessId;
+  final List<Employees>? employees;
 
-  LoggedInUser(
-      {this.businessId,
-      this.uid,
-      this.username,
-      this.email,
-      this.businessName,
-      this.employees});
+  const LoggedInUser({
+    this.uid,
+    this.username,
+    this.email,
+    this.businessName,
+    this.businessId,
+    this.employees,
+  });
 
-  LoggedInUser copyWith(
-      {String? uid,
-      String? businessId,
-      String? username,
-      String? email,
-      String? businessName,
-      List<Employees>? employees}) {
+  LoggedInUser copyWith({
+    String? uid,
+    String? username,
+    String? email,
+    String? businessName,
+    String? businessId,
+    List<Employees>? employees,
+  }) {
     return LoggedInUser(
-        businessId: businessId ?? this.businessId,
-        uid: uid ?? this.uid,
-        username: username ?? this.username,
-        email: email ?? this.email,
-        businessName: businessName ?? this.businessName,
-        employees: employees ?? this.employees);
+      uid: uid ?? this.uid,
+      username: username ?? this.username,
+      email: email ?? this.email,
+      businessName: businessName ?? this.businessName,
+      businessId: businessId ?? this.businessId,
+      employees: employees ?? this.employees,
+    );
   }
 
   Map<String, Object?> toJson() {
     return {
       'uid': uid,
-      'business_id': businessId,
       'username': username,
       'email': email,
       'business_name': businessName,
-      'employees':
-          employees?.map<Map<String, dynamic>>((data) => data.toJson()).toList()
+      'business_id': businessId,
+      'employees': employees
+          ?.map<Map<String, dynamic>>((data) => data.toJson())
+          .toList(),
     };
   }
 
-  static LoggedInUser fromJson(Map<String, Object?> json) {
+  factory LoggedInUser.fromJson(Map<String, Object?> json) {
     return LoggedInUser(
-        uid: json['uid'] == null ? null : json['uid'] as String,
-        businessId:
-            json['business_id'] == null ? null : json['business_id'] as String,
-        username: json['username'] == null ? null : json['username'] as String,
-        email: json['email'] == null ? null : json['email'] as String,
-        businessName: json['business_name'] == null
-            ? null
-            : json['business_name'] as String,
-        employees: json['employees'] == null
-            ? null
-            : (json['employees'] as List)
-                .map<Employees>(
-                    (data) => Employees.fromJson(data as Map<String, Object?>))
-                .toList());
+      uid: json['uid'] as String?,
+      username: json['username'] as String?,
+      email: json['email'] as String?,
+      businessName: json['business_name'] as String?,
+      businessId: json['business_id'] as String?,
+      employees: (json['employees'] as List?)
+          ?.map((data) => Employees.fromJson(data as Map<String, Object?>))
+          .toList(),
+    );
+  }
+
+  factory LoggedInUser.fromFirestore(DocumentSnapshot doc) {
+    Map<String, Object?> json = doc.data() as Map<String, Object?>;
+    return LoggedInUser.fromJson(json);
+  }
+
+  Map<String, Object?> toFirestore() {
+    return toJson();
   }
 
   @override
   String toString() {
     return '''LoggedInUser(
-                uid:$uid,
-                business_id:$businessId,
-                username:$username,
-                email:$email,
-                business_name:$businessName,
-                employees:${employees.toString()}
+      uid:$uid,
+      username:$username,
+      email:$email,
+      businessName:$businessName,
+      businessId:$businessId,
+      employees:${employees.toString()}
     ) ''';
   }
 
@@ -77,17 +87,17 @@ class LoggedInUser {
     return other is LoggedInUser &&
         other.runtimeType == runtimeType &&
         other.uid == uid &&
-        other.businessId == businessId &&
         other.username == username &&
         other.email == email &&
         other.businessName == businessName &&
+        other.businessId == businessId &&
         other.employees == employees;
   }
 
   @override
   int get hashCode {
     return Object.hash(
-        runtimeType, uid, businessId, username, email, businessName, employees);
+        runtimeType, uid, username, email, businessName, businessId, employees);
   }
 }
 
@@ -97,19 +107,33 @@ class Employees {
   final String? pin;
   final String? starttime;
   final String? endtime;
-  const Employees({this.id, this.name, this.pin, this.starttime, this.endtime});
-  Employees copyWith(
-      {int? id,
-      String? name,
-      String? pin,
-      String? starttime,
-      String? endtime}) {
+  final List<Alldepartment>? alldepartment;
+
+  const Employees({
+    this.id,
+    this.name,
+    this.pin,
+    this.starttime,
+    this.endtime,
+    this.alldepartment,
+  });
+
+  Employees copyWith({
+    int? id,
+    String? name,
+    String? pin,
+    String? starttime,
+    String? endtime,
+    List<Alldepartment>? alldepartment,
+  }) {
     return Employees(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        pin: pin ?? this.pin,
-        starttime: starttime ?? this.starttime,
-        endtime: endtime ?? this.endtime);
+      id: id ?? this.id,
+      name: name ?? this.name,
+      pin: pin ?? this.pin,
+      starttime: starttime ?? this.starttime,
+      endtime: endtime ?? this.endtime,
+      alldepartment: alldepartment ?? this.alldepartment,
+    );
   }
 
   Map<String, Object?> toJson() {
@@ -118,28 +142,44 @@ class Employees {
       'name': name,
       'pin': pin,
       'starttime': starttime,
-      'endtime': endtime
+      'endtime': endtime,
+      'alldepartment': alldepartment
+          ?.map<Map<String, dynamic>>((data) => data.toJson())
+          .toList(),
     };
   }
 
-  static Employees fromJson(Map<String, Object?> json) {
+  factory Employees.fromJson(Map<String, Object?> json) {
     return Employees(
-        id: json['id'] == null ? null : json['id'] as int,
-        name: json['name'] == null ? null : json['name'] as String,
-        pin: json['pin'] == null ? null : json['pin'] as String,
-        starttime:
-            json['starttime'] == null ? null : json['starttime'] as String,
-        endtime: json['endtime'] == null ? null : json['endtime'] as String);
+      id: json['id'] as int?,
+      name: json['name'] as String?,
+      pin: json['pin'] as String?,
+      starttime: json['starttime'] as String?,
+      endtime: json['endtime'] as String?,
+      alldepartment: (json['alldepartment'] as List?)
+          ?.map((data) => Alldepartment.fromJson(data as Map<String, Object?>))
+          .toList(),
+    );
+  }
+
+  factory Employees.fromFirestore(DocumentSnapshot doc) {
+    Map<String, Object?> json = doc.data() as Map<String, Object?>;
+    return Employees.fromJson(json);
+  }
+
+  Map<String, Object?> toFirestore() {
+    return toJson();
   }
 
   @override
   String toString() {
     return '''Employees(
-                id:$id,
-name:$name,
-pin:$pin,
-starttime:$starttime,
-endtime:$endtime
+      id:$id,
+      name:$name,
+      pin:$pin,
+      starttime:$starttime,
+      endtime:$endtime,
+      alldepartment:${alldepartment.toString()}
     ) ''';
   }
 
@@ -151,11 +191,115 @@ endtime:$endtime
         other.name == name &&
         other.pin == pin &&
         other.starttime == starttime &&
-        other.endtime == endtime;
+        other.endtime == endtime &&
+        other.alldepartment == alldepartment;
   }
 
   @override
   int get hashCode {
-    return Object.hash(runtimeType, id, name, pin, starttime, endtime);
+    return Object.hash(
+        runtimeType, id, name, pin, starttime, endtime, alldepartment);
+  }
+}
+
+class Alldepartment {
+  final Department? department;
+
+  const Alldepartment({this.department});
+
+  Alldepartment copyWith({Department? department}) {
+    return Alldepartment(department: department ?? this.department);
+  }
+
+  Map<String, Object?> toJson() {
+    return {'department': department?.toJson()};
+  }
+
+  factory Alldepartment.fromJson(Map<String, Object?> json) {
+    return Alldepartment(
+      department: json['department'] == null
+          ? null
+          : Department.fromJson(json['department'] as Map<String, Object?>),
+    );
+  }
+
+  factory Alldepartment.fromFirestore(DocumentSnapshot doc) {
+    Map<String, Object?> json = doc.data() as Map<String, Object?>;
+    return Alldepartment.fromJson(json);
+  }
+
+  Map<String, Object?> toFirestore() {
+    return toJson();
+  }
+
+  @override
+  String toString() {
+    return '''Alldepartment(
+      department:${department.toString()}
+    ) ''';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is Alldepartment &&
+        other.runtimeType == runtimeType &&
+        other.department == department;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(runtimeType, department);
+  }
+}
+
+class Department {
+  final int? id;
+  final String? name;
+
+  const Department({this.id, this.name});
+
+  Department copyWith({int? id, String? name}) {
+    return Department(id: id ?? this.id, name: name ?? this.name);
+  }
+
+  Map<String, Object?> toJson() {
+    return {'id': id, 'name': name};
+  }
+
+  factory Department.fromJson(Map<String, Object?> json) {
+    return Department(
+      id: json['id'] as int?,
+      name: json['name'] as String?,
+    );
+  }
+
+  factory Department.fromFirestore(DocumentSnapshot doc) {
+    Map<String, Object?> json = doc.data() as Map<String, Object?>;
+    return Department.fromJson(json);
+  }
+
+  Map<String, Object?> toFirestore() {
+    return toJson();
+  }
+
+  @override
+  String toString() {
+    return '''Department(
+      id:$id,
+      name:$name
+    ) ''';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is Department &&
+        other.runtimeType == runtimeType &&
+        other.id == id &&
+        other.name == name;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(runtimeType, id, name);
   }
 }

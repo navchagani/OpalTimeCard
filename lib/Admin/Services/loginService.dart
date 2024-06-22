@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
@@ -26,6 +27,7 @@ class AuthService {
         if (responseBody['success']) {
           LoggedInUser loggedInUser =
               LoggedInUser.fromJson(responseBody['data']);
+          log("model:${responseBody['data']}");
           return {'success': true, 'data': loggedInUser.toJson()};
         } else {
           // Adjusted to handle error info in the `data` key

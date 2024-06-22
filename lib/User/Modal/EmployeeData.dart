@@ -8,6 +8,7 @@ class EmployeeAttendance {
   final String? uid;
   final String? status;
   final String? currentLocation;
+  final String? departmentId;
 
   const EmployeeAttendance({
     this.businessId,
@@ -19,6 +20,7 @@ class EmployeeAttendance {
     this.uid,
     this.status,
     this.currentLocation,
+    this.departmentId,
   });
 
   EmployeeAttendance copyWith({
@@ -31,6 +33,7 @@ class EmployeeAttendance {
     String? uid,
     String? status,
     String? currentLocation,
+    String? departmentId,
   }) {
     return EmployeeAttendance(
       employeeId: employeeId ?? this.employeeId,
@@ -42,6 +45,7 @@ class EmployeeAttendance {
       uid: uid ?? this.uid,
       status: status ?? this.status,
       currentLocation: currentLocation ?? this.currentLocation,
+      departmentId: departmentId ?? this.departmentId,
     );
   }
 
@@ -55,7 +59,8 @@ class EmployeeAttendance {
       'time': time,
       'uid': uid,
       'status': status,
-      'current_location': currentLocation
+      'current_location': currentLocation,
+      'department_id': departmentId,
     };
   }
 
@@ -76,22 +81,26 @@ class EmployeeAttendance {
       currentLocation: json['current_location'] == null
           ? null
           : json['current_location'] as String,
+      departmentId: json['department_id'] == null
+          ? null
+          : json['department_id'] as String,
     );
   }
 
   @override
   String toString() {
     return '''EmployeeAttendance(
-                employeeId:$employeeId,
-employeeName:$employeeName,
-businessId:$businessId,
-pin:$pin,
-date:$date,
-time:$time,
-uid:$uid,
-status:$status
-currentLocation:$currentLocation
-    ) ''';
+      employeeId: $employeeId,
+      employeeName: $employeeName,
+      businessId: $businessId,
+      pin: $pin,
+      date: $date,
+      time: $time,
+      uid: $uid,
+      status: $status,
+      currentLocation: $currentLocation,
+      departmentId: $departmentId,
+    )''';
   }
 
   @override
@@ -105,13 +114,25 @@ currentLocation:$currentLocation
         other.date == date &&
         other.time == time &&
         other.uid == uid &&
+        other.status == status &&
         other.currentLocation == currentLocation &&
-        other.status == status;
+        other.departmentId == departmentId;
   }
 
   @override
   int get hashCode {
-    return Object.hash(runtimeType, employeeId, employeeName, businessId, pin,
-        date, time, uid, status, currentLocation);
+    return Object.hash(
+      runtimeType,
+      employeeId,
+      employeeName,
+      businessId,
+      pin,
+      date,
+      time,
+      uid,
+      status,
+      currentLocation,
+      departmentId,
+    );
   }
 }

@@ -1,5 +1,6 @@
-// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously, unnecessary_null_comparison
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
@@ -10,6 +11,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/User/Modal/EmployeeData.dart';
+import 'package:opaltimecard/User/Views/departmentDailog.dart';
 import 'package:opaltimecard/connectivity.dart';
 import 'package:opaltimecard/localDatabase/DatabaseHelper.dart';
 import 'package:pinput/pinput.dart';
@@ -26,10 +28,8 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
   TextEditingController pinCode = TextEditingController();
   TextEditingController locationController = TextEditingController();
 
-  // UserService userService = UserService();
-  List<LoggedInUser>? currentUser;
-  List<EmployeeAttendance> attendanceList = [];
-
+  List<Alldepartment> departments = [];
+  Timer? _dismissTimer;
   String text = '';
   FocusNode pinFocusNode = FocusNode();
 
@@ -120,351 +120,8 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
             return const Employees();
           },
         );
-        EmployeeAttendance? lastAttendance = await DatabaseHelper.instance
-            .getLastAttendance(matchedEmployee.pin!);
 
-        if (lastAttendance != null && lastAttendance.status == 'in') {
-          List<String> parts = lastAttendance.time!.split(":");
-          int hours = int.parse(parts[0]);
-          int minutes = int.parse(parts[1]);
-
-          List<String> dateParts = lastAttendance.date!.split("-");
-          int year = int.parse(dateParts[0]);
-          int month = int.parse(dateParts[1]);
-          int day = int.parse(dateParts[2]);
-
-          DateTime dateTime = DateTime(year, month, day, hours, minutes);
-          String lastTime = DateFormat('hh:mm a').format(dateTime);
-
-          DateTime time1 = DateTime.now();
-          Duration difference = time1.difference(dateTime);
-
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (BuildContext context) {
-              double width = MediaQuery.of(context).size.width;
-
-              return Dialog(
-                child: SizedBox(
-                  width: width > 800 ? width * 0.3 : width * 0.5,
-                  child: Wrap(
-                    children: [
-                      Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(20),
-                                    topRight: Radius.circular(20)),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(10.0),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      ' ${matchedEmployee.name ?? "Unknown"}',
-                                      style: TextStyle(
-                                        fontSize: width < 700 ? 18 : 25,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                      textAlign: TextAlign.start,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const Divider(
-                              height: 3,
-                            ),
-                            const SizedBox(
-                              height: 20,
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(left: 10),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: [
-                                  const Column(
-                                    children: [
-                                      Icon(
-                                        Icons.logout_rounded,
-                                        color: Colors.red,
-                                        size: 50,
-                                      ),
-                                    ],
-                                  ),
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Out',
-                                        style: TextStyle(
-                                            fontSize: width < 700 ? 20 : 25,
-                                            fontWeight: FontWeight.bold),
-                                        textAlign: TextAlign.start,
-                                      ),
-                                      Text(
-                                        DateFormat('hh:mm a')
-                                            .format(DateTime.now()),
-                                        style: TextStyle(
-                                            fontSize: width < 700 ? 15 : 20,
-                                            fontWeight: FontWeight.bold),
-                                      )
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 10,
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(left: 10),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    children: [
-                                      const SizedBox(
-                                        width: 10,
-                                      ),
-                                      const Text(
-                                        'In:',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(
-                                        width: 5,
-                                      ),
-                                      Text(
-                                        "${lastAttendance.date ?? ''} $lastTime",
-                                        style: TextStyle(
-                                            fontSize: width < 700 ? 15 : 20,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(
-                                    height: 5,
-                                  ),
-                                  Row(
-                                    children: [
-                                      const SizedBox(
-                                        width: 10,
-                                      ),
-                                      const Text(
-                                        'Out:',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(
-                                        width: 5,
-                                      ),
-                                      Text(
-                                        DateFormat('yyyy-MM-dd hh:mm aa')
-                                            .format(DateTime.now()),
-                                        style: TextStyle(
-                                            fontSize: width < 700 ? 15 : 20,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(
-                                    height: 5,
-                                  ),
-                                  Row(
-                                    children: [
-                                      const SizedBox(
-                                        width: 10,
-                                      ),
-                                      const Text(
-                                        'Hours:',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(
-                                        width: 5,
-                                      ),
-                                      Text(
-                                        "${difference.inHours.toString().padLeft(2, '0')}:${difference.inMinutes.remainder(60).toString().padLeft(2, '0')}",
-                                        style: const TextStyle(
-                                          fontSize: 30,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color.fromRGBO(30, 60, 87, 1),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 10,
-                            )
-                          ]),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ).whenComplete(() async {
-            bool isConnected =
-                await ConnectionFuncs.checkInternetConnectivity();
-            String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
-            String currentDate =
-                DateFormat('yyyy-MM-dd').format(DateTime.now());
-            await DatabaseHelper.instance.insertAttendance(
-              lastAttendance.copyWith(
-                time: currentTime,
-                date: currentDate,
-                uid: loggedInUser.uid,
-                status: 'out',
-                businessId: loggedInUser.businessId,
-                currentLocation: locationController.text,
-              ),
-            );
-            EmployeeAttendance attendanceRecord = EmployeeAttendance(
-              employeeId: matchedEmployee.id,
-              employeeName: matchedEmployee.name,
-              pin: matchedEmployee.pin,
-              time: currentTime,
-              date: currentDate,
-              uid: loggedInUser.uid,
-              status: 'out',
-              businessId: loggedInUser.businessId,
-              currentLocation: locationController.text,
-            );
-            if (isConnected) {
-              DatabaseHelper databaseHelper = DatabaseHelper.instance;
-              await databaseHelper.postSingleDataToAPI(attendanceRecord);
-            } else {
-              return;
-            }
-          });
-          final player = AudioPlayer();
-          await player.play(AssetSource('audios/out.mp3'));
-          Future.delayed(const Duration(seconds: 5), () {
-            Navigator.of(context, rootNavigator: true).pop();
-          });
-        } else {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (BuildContext context) {
-              double width = MediaQuery.of(context).size.width;
-
-              return Dialog(
-                child: SizedBox(
-                  width: width > 800 ? width * 0.3 : width * 0.5,
-                  child: Wrap(
-                    children: [
-                      Column(children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(20),
-                                topRight: Radius.circular(20)),
-                            color: Colors.green.shade800,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(10.0),
-                                child: Text(
-                                  ' ${matchedEmployee.name ?? "Unknown"}',
-                                  style: TextStyle(
-                                    fontSize: width < 700 ? 18 : 25,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                  textAlign: TextAlign.start,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Divider(
-                          height: 3,
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.login_rounded,
-                              color: Colors.green.shade800,
-                              size: 50,
-                            ),
-                            const SizedBox(
-                              width: 20,
-                            ),
-                            Text(
-                              'IN: ${DateFormat('hh:mm a').format(DateTime.now())}',
-                              style: TextStyle(
-                                  fontSize: width < 700 ? 20 : 25,
-                                  fontWeight: FontWeight.bold),
-                            )
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 30,
-                        ),
-                      ]),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ).whenComplete(() async {
-            bool isConnected =
-                await ConnectionFuncs.checkInternetConnectivity();
-
-            String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
-            String currentDate =
-                DateFormat('yyyy-MM-dd').format(DateTime.now());
-            EmployeeAttendance attendanceRecord = EmployeeAttendance(
-              employeeId: matchedEmployee.id,
-              employeeName: matchedEmployee.name,
-              pin: matchedEmployee.pin,
-              time: currentTime,
-              date: currentDate,
-              uid: loggedInUser.uid,
-              status: 'in',
-              businessId: loggedInUser.businessId,
-              currentLocation: locationController.text,
-            );
-            int id = await DatabaseHelper.instance
-                .insertAttendance(attendanceRecord);
-            log('Attendance record inserted with ID: $id');
-            if (isConnected) {
-              DatabaseHelper databaseHelper = DatabaseHelper.instance;
-              await databaseHelper.postSingleDataToAPI(attendanceRecord);
-            } else {
-              return;
-            }
-          });
-
-          final player = AudioPlayer();
-          await player.play(AssetSource('audios/in.mp3'));
-
-          Future.delayed(const Duration(seconds: 5), () {
-            Navigator.of(context, rootNavigator: true).pop();
-          });
-        }
+        handleAttendance(matchedEmployee, loggedInUser);
       } else {
         final player = AudioPlayer();
         await player.play(AssetSource('audios/pleasetryagain.mp3'));
@@ -476,6 +133,410 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
       pinCode.clear();
       text = '';
     });
+  }
+
+  void handleAttendance(
+      Employees matchedEmployee, LoggedInUser loggedInUser) async {
+    EmployeeAttendance? lastAttendance =
+        await DatabaseHelper.instance.getLastAttendance(matchedEmployee.pin!);
+    bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
+    String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
+    String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    if (lastAttendance != null && lastAttendance.status == 'in') {
+      List<String> parts = lastAttendance.time!.split(":");
+      int hours = int.parse(parts[0]);
+      int minutes = int.parse(parts[1]);
+
+      List<String> dateParts = lastAttendance.date!.split("-");
+      int year = int.parse(dateParts[0]);
+      int month = int.parse(dateParts[1]);
+      int day = int.parse(dateParts[2]);
+
+      DateTime dateTime = DateTime(year, month, day, hours, minutes);
+      String lastTime = DateFormat('hh:mm a').format(dateTime);
+
+      DateTime time1 = DateTime.now();
+      Duration difference = time1.difference(dateTime);
+
+      // Future.delayed(Duration(milliseconds: 500), () async {
+
+      // });
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          double width = MediaQuery.of(context).size.width;
+
+          return Dialog(
+            child: SizedBox(
+              width: width > 800 ? width * 0.3 : width * 0.5,
+              child: Wrap(
+                children: [
+                  Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(20),
+                                topRight: Radius.circular(20)),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(10.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  ' ${matchedEmployee.name ?? "Unknown"}',
+                                  style: TextStyle(
+                                    fontSize: width < 700 ? 18 : 25,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                  textAlign: TextAlign.start,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const Divider(
+                          height: 3,
+                        ),
+                        const SizedBox(
+                          height: 20,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              const Column(
+                                children: [
+                                  Icon(
+                                    Icons.logout_rounded,
+                                    color: Colors.red,
+                                    size: 50,
+                                  ),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Out',
+                                    style: TextStyle(
+                                        fontSize: width < 700 ? 20 : 25,
+                                        fontWeight: FontWeight.bold),
+                                    textAlign: TextAlign.start,
+                                  ),
+                                  Text(
+                                    DateFormat('hh:mm a')
+                                        .format(DateTime.now()),
+                                    style: TextStyle(
+                                        fontSize: width < 700 ? 15 : 20,
+                                        fontWeight: FontWeight.bold),
+                                  )
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 10,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 10),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  const SizedBox(
+                                    width: 10,
+                                  ),
+                                  const Text(
+                                    'In:',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(
+                                    width: 5,
+                                  ),
+                                  Text(
+                                    "${lastAttendance.date ?? ''} $lastTime",
+                                    style: TextStyle(
+                                        fontSize: width < 700 ? 15 : 20,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(
+                                height: 5,
+                              ),
+                              Row(
+                                children: [
+                                  const SizedBox(
+                                    width: 10,
+                                  ),
+                                  const Text(
+                                    'Out:',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(
+                                    width: 5,
+                                  ),
+                                  Text(
+                                    DateFormat('yyyy-MM-dd hh:mm aa')
+                                        .format(DateTime.now()),
+                                    style: TextStyle(
+                                        fontSize: width < 700 ? 15 : 20,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(
+                                height: 5,
+                              ),
+                              Row(
+                                children: [
+                                  const SizedBox(
+                                    width: 10,
+                                  ),
+                                  const Text(
+                                    'Hours:',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(
+                                    width: 5,
+                                  ),
+                                  Text(
+                                    "${difference.inHours.toString().padLeft(2, '0')}:${difference.inMinutes.remainder(60).toString().padLeft(2, '0')}",
+                                    style: const TextStyle(
+                                      fontSize: 30,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color.fromRGBO(30, 60, 87, 1),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (matchedEmployee.alldepartment!.length > 1)
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const SizedBox(
+                                      height: 5,
+                                    ),
+                                    ElevatedButton(
+                                      style: ButtonStyle(
+                                        backgroundColor: MaterialStateProperty
+                                            .resolveWith<Color?>(
+                                          (Set<MaterialState> states) {
+                                            return Colors.red;
+                                          },
+                                        ),
+                                        fixedSize: MaterialStateProperty.all(
+                                            const Size(150, 40)),
+                                      ),
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        _dismissTimer?.cancel();
+                                        showDialog(
+                                          context: context,
+                                          barrierDismissible: false,
+                                          builder: (BuildContext context) {
+                                            return DepartmentCard(
+                                                employee: matchedEmployee);
+                                          },
+                                        );
+                                      },
+                                      child: const Text(
+                                        "Transfer",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                            ],
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 10,
+                        )
+                      ]),
+                ],
+              ),
+            ),
+          );
+        },
+      ).whenComplete(() async {
+        _dismissTimer?.cancel();
+        String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
+        String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+        Future.delayed(const Duration(milliseconds: 100), () async {
+          EmployeeAttendance attendanceRecord = EmployeeAttendance(
+              employeeId: matchedEmployee.id,
+              employeeName: matchedEmployee.name,
+              pin: matchedEmployee.pin,
+              time: currentTime,
+              date: currentDate,
+              uid: loggedInUser.uid,
+              status: 'out',
+              businessId: loggedInUser.businessId,
+              currentLocation: locationController.text,
+              departmentId: lastAttendance.departmentId);
+          if (isConnected) {
+            DatabaseHelper databaseHelper = DatabaseHelper.instance;
+            await databaseHelper.postSingleDataToAPI(attendanceRecord);
+          } else {
+            return;
+          }
+        });
+        await DatabaseHelper.instance.insertAttendance(
+          lastAttendance.copyWith(
+              time: currentTime,
+              date: currentDate,
+              uid: loggedInUser.uid,
+              status: 'out',
+              businessId: loggedInUser.businessId,
+              currentLocation: locationController.text,
+              departmentId: lastAttendance.departmentId),
+        );
+      });
+      final player = AudioPlayer();
+      await player.play(AssetSource('audios/out.mp3'));
+      _dismissTimer = Timer(const Duration(seconds: 5), () {
+        Navigator.of(context, rootNavigator: true).pop();
+      });
+    } else {
+      if (matchedEmployee.alldepartment!.length > 1) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return DepartmentCard(employee: matchedEmployee);
+          },
+        );
+      } else {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            double width = MediaQuery.of(context).size.width;
+
+            return Dialog(
+              child: SizedBox(
+                width: width > 800 ? width * 0.3 : width * 0.5,
+                child: Wrap(
+                  children: [
+                    Column(children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20)),
+                          color: Colors.green.shade800,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(10.0),
+                              child: Text(
+                                ' ${matchedEmployee.name ?? "Unknown"}',
+                                style: TextStyle(
+                                  fontSize: width < 700 ? 18 : 25,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                textAlign: TextAlign.start,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(
+                        height: 3,
+                      ),
+                      const SizedBox(
+                        height: 20,
+                      ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.login_rounded,
+                            color: Colors.green.shade800,
+                            size: 50,
+                          ),
+                          const SizedBox(
+                            width: 20,
+                          ),
+                          Text(
+                            'IN: ${DateFormat('hh:mm a').format(DateTime.now())}',
+                            style: TextStyle(
+                                fontSize: width < 700 ? 20 : 25,
+                                fontWeight: FontWeight.bold),
+                          )
+                        ],
+                      ),
+                      const SizedBox(
+                        height: 30,
+                      ),
+                    ]),
+                  ],
+                ),
+              ),
+            );
+          },
+        ).whenComplete(() async {
+          bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
+          int? departmentId = matchedEmployee.alldepartment!.isEmpty
+              ? null
+              : matchedEmployee.alldepartment![0].department?.id;
+          String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
+          String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+          EmployeeAttendance attendanceRecord = EmployeeAttendance(
+              employeeId: matchedEmployee.id,
+              employeeName: matchedEmployee.name,
+              pin: matchedEmployee.pin,
+              time: currentTime,
+              date: currentDate,
+              uid: loggedInUser.uid,
+              status: 'in',
+              businessId: loggedInUser.businessId,
+              currentLocation: locationController.text,
+              departmentId: departmentId.toString());
+          int id =
+              await DatabaseHelper.instance.insertAttendance(attendanceRecord);
+          log('Attendance record inserted with ID: $id');
+          if (isConnected) {
+            DatabaseHelper databaseHelper = DatabaseHelper.instance;
+            await databaseHelper.postSingleDataToAPI(attendanceRecord);
+          } else {
+            return;
+          }
+        });
+
+        final player = AudioPlayer();
+        await player.play(AssetSource('audios/in.mp3'));
+
+        Future.delayed(const Duration(seconds: 5), () {
+          Navigator.of(context, rootNavigator: true).pop();
+        });
+      }
+    }
   }
 
   void _showerrorDailog(BuildContext context) {
