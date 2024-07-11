@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
@@ -8,11 +9,12 @@ import 'package:opaltimecard/Admin/Views/admin_login.dart';
 import 'package:opaltimecard/Utils/button.dart';
 import 'package:opaltimecard/Utils/customDailoge.dart';
 import 'package:opaltimecard/Utils/inputFeild.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LogoutDailog extends StatefulWidget {
   final String email;
-  LogoutDailog({super.key, required this.email});
+  const LogoutDailog({super.key, required this.email});
 
   @override
   State<LogoutDailog> createState() => _LogoutDailogState();
@@ -26,6 +28,10 @@ class _LogoutDailogState extends State<LogoutDailog> {
   bool loggingIn = false;
   late SharedPreferences _prefs;
   String? modelName;
+  String deviceType = Platform.isAndroid ? 'Android' : 'iOS';
+  String? appVersion;
+  String? buildNumber;
+  String? deviceMACAddress;
 
   Future<String?> getMacAddress() async {
     try {
@@ -38,20 +44,41 @@ class _LogoutDailogState extends State<LogoutDailog> {
     }
   }
 
+  Future<void> getVersion() async {
+    PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    appVersion = '${packageInfo.version}.${packageInfo.buildNumber}';
+  }
+
   Future<Map<String, String>> getDeviceInfo() async {
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-    modelName = androidInfo.model;
+    String? androidId = androidInfo.fingerprint;
+
+    List<String> parts = androidId.split('/');
+
+    if (parts.length >= 2) {
+      String secondLastSegment =
+          parts[parts.length - 2]; // This will be "TP1A.220624.014"
+      List<String> secondLastParts = secondLastSegment.split(':');
+      if (secondLastParts.length >= 2) {
+        buildNumber = secondLastParts.first; // This will be "TP1A.220624.014"
+      } else {
+        print("Second last segment does not contain a colon.");
+      }
+    } else {
+      print("String does not have enough parts.");
+    }
 
     return {
-      // 'serialNumber': serialNo ?? '',
-      'modelName': modelName ?? '',
+      'modelName': androidInfo.model,
+      'buildNumber': buildNumber.toString(),
     };
   }
 
   @override
   void initState() {
     emailController.text = widget.email;
+    getVersion(); // Call getVersion() to initialize appVersion
     super.initState();
   }
 
@@ -61,31 +88,43 @@ class _LogoutDailogState extends State<LogoutDailog> {
 
   void loginUser({required BuildContext context}) async {
     Map<String, String> deviceInfo = await getDeviceInfo();
-    modelName = deviceInfo['modelName'] ?? 'Unknown';
-    String? macAddress = await getMacAddress();
+    String modelName = deviceInfo['modelName'] ?? 'Unknown';
+    String buildNumber = deviceInfo['buildNumber'] ?? 'Unknown';
+
     String email = emailController.text;
     String pass = passwordController.text;
     setState(() {
       loggingIn = true;
     });
-    try {
-      final Map<String, dynamic> response = await _authService.loginUser(
-          context, email, pass, modelName.toString(), macAddress.toString());
-      if (response['success'] == true) {
-        await _prefs.clear();
-        Navigator.of(context).pop();
-        Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const AdminLoginScreen()));
-      } else {
-        ConstDialog(context).showErrorDialog(error: response['error']['info']);
-      }
-    } catch (e) {
-      ConstDialog(context).showErrorDialog(error: 'An error occurred: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          loggingIn = false;
-        });
+    if (passwordController.text.isEmpty) {
+      ConstDialog(context).showErrorDialog(error: 'Please enter password.');
+    } else {
+      try {
+        final Map<String, dynamic> response = await _authService.loginUser(
+            context,
+            email,
+            pass,
+            modelName.toString(),
+            buildNumber,
+            deviceType,
+            appVersion.toString());
+        if (response['success'] == true) {
+          await _prefs.clear();
+          Navigator.of(context).pop();
+          Navigator.of(context).pushReplacement(MaterialPageRoute(
+              builder: (context) => const AdminLoginScreen()));
+        } else {
+          // ConstDialog(context)
+          //     .showErrorDialog(error: response['error']['info']);
+        }
+      } catch (e) {
+        log('logout error:$e');
+      } finally {
+        if (mounted) {
+          setState(() {
+            loggingIn = false;
+          });
+        }
       }
     }
   }

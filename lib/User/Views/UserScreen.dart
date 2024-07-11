@@ -133,8 +133,7 @@ class _UserScreenState extends State<UserScreen> {
         await DatabaseHelper.instance.getLastAttendance(matchedEmployee.pin!);
     if (lastAttendance != null && lastAttendance.status == 'in') {
       bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
-      String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
-      String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
       List<String> parts = lastAttendance.time!.split(":");
       int hours = int.parse(parts[0]);
       int minutes = int.parse(parts[1]);
@@ -372,16 +371,18 @@ class _UserScreenState extends State<UserScreen> {
         String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
         Future.delayed(const Duration(milliseconds: 100), () async {
           EmployeeAttendance attendanceRecord = EmployeeAttendance(
-              employeeId: matchedEmployee.id,
-              employeeName: matchedEmployee.name,
-              pin: matchedEmployee.pin,
-              time: currentTime,
-              date: currentDate,
-              uid: loggedInUser.uid,
-              status: 'out',
-              businessId: loggedInUser.businessId,
-              currentLocation: locationController.text,
-              departmentId: lastAttendance.departmentId);
+            employeeId: matchedEmployee.id,
+            employeeName: matchedEmployee.name,
+            pin: matchedEmployee.pin,
+            time: currentTime,
+            date: currentDate,
+            uid: loggedInUser.uid,
+            status: 'out',
+            businessId: loggedInUser.businessId,
+            currentLocation: locationController.text,
+            departmentId: lastAttendance.departmentId,
+            deviceId: loggedInUser.deviceId.toString(),
+          );
           if (isConnected) {
             DatabaseHelper databaseHelper = DatabaseHelper.instance;
             await databaseHelper.postSingleDataToAPI(attendanceRecord);
@@ -391,13 +392,18 @@ class _UserScreenState extends State<UserScreen> {
         });
         await DatabaseHelper.instance.insertAttendance(
           lastAttendance.copyWith(
-              time: currentTime,
-              date: currentDate,
-              uid: loggedInUser.uid,
-              status: 'out',
-              businessId: loggedInUser.businessId,
-              currentLocation: locationController.text,
-              departmentId: lastAttendance.departmentId),
+            employeeId: matchedEmployee.id,
+            employeeName: matchedEmployee.name,
+            time: currentTime,
+            pin: matchedEmployee.pin,
+            date: currentDate,
+            uid: loggedInUser.uid,
+            status: 'out',
+            businessId: loggedInUser.businessId,
+            currentLocation: locationController.text,
+            departmentId: lastAttendance.departmentId,
+            deviceId: loggedInUser.deviceId.toString(),
+          ),
         );
       });
       final player = AudioPlayer();
@@ -491,6 +497,9 @@ class _UserScreenState extends State<UserScreen> {
           bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
           String currentTime = DateFormat('HH:mm').format(DateTime.now());
           String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+          int? departmentId = matchedEmployee.alldepartment!.isEmpty
+              ? null
+              : matchedEmployee.alldepartment![0].department?.id;
           EmployeeAttendance attendanceRecord = EmployeeAttendance(
             employeeId: matchedEmployee.id,
             employeeName: matchedEmployee.name,
@@ -501,6 +510,8 @@ class _UserScreenState extends State<UserScreen> {
             uid: loggedInUser.uid,
             businessId: loggedInUser.businessId,
             currentLocation: locationController.text,
+            departmentId: departmentId.toString(),
+            deviceId: loggedInUser.deviceId.toString(),
           );
           int id =
               await DatabaseHelper.instance.insertAttendance(attendanceRecord);
@@ -659,9 +670,15 @@ class _UserScreenState extends State<UserScreen> {
       } else {}
     });
     _loadUserData();
-    // _initDeviceInfo();
-    super.initState();
     selectedTime = TimeOfDay.now();
+    Timer.periodic(const Duration(seconds: 1), (Timer timer) {
+      if (mounted) {
+        setState(() {
+          selectedTime = TimeOfDay.now();
+        });
+      }
+    });
+    super.initState();
   }
 
   Future<void> _getCurrentLocation() async {

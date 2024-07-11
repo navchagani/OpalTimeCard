@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,6 +15,7 @@ import 'package:opaltimecard/User/Views/UserScreen.dart';
 import 'package:opaltimecard/Utils/button.dart';
 import 'package:opaltimecard/Utils/customDailoge.dart';
 import 'package:opaltimecard/connectivity.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:opaltimecard/Utils/inputFeild.dart';
@@ -31,10 +33,15 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   bool loggingIn = false;
   final AuthService _authService = AuthService();
   String? modelName;
+  String? buildNumber;
+  String deviceType = Platform.isAndroid ? 'Android' : 'iOS';
+  String? appVersion;
+  String? ipAddress;
   String? deviceMACAddress;
   late StreamSubscription<bool> streamSubscription;
   TextEditingController emailaddress = TextEditingController();
   TextEditingController password = TextEditingController();
+
   Future<String?> getMacAddress() async {
     try {
       final networkInfo = NetworkInfo();
@@ -46,13 +53,35 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     }
   }
 
+  Future<void> getVersion() async {
+    PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    appVersion = '${packageInfo.version}.${packageInfo.buildNumber}';
+    log('buildnumber ${packageInfo.buildNumber}');
+  }
+
   Future<Map<String, String>> getDeviceInfo() async {
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-    modelName = androidInfo.model;
+    String? androidId = androidInfo.fingerprint;
+
+    List<String> parts = androidId.split('/');
+
+    if (parts.length >= 2) {
+      String secondLastSegment =
+          parts[parts.length - 2]; // This will be "TP1A.220624.014"
+      List<String> secondLastParts = secondLastSegment.split(':');
+      if (secondLastParts.length >= 2) {
+        buildNumber = secondLastParts.first; // This will be "TP1A.220624.014"
+      } else {
+        print("Second last segment does not contain a colon.");
+      }
+    } else {
+      print("String does not have enough parts.");
+    }
 
     return {
-      'modelName': modelName ?? '',
+      'modelName': androidInfo.model,
+      'buildNumber': buildNumber.toString(),
     };
   }
 
@@ -63,9 +92,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
     Map<String, String> deviceInfo = await getDeviceInfo();
     String modelName = deviceInfo['modelName'] ?? 'Unknown';
-    String? macAddress = await getMacAddress();
+    String buildNumber = deviceInfo['buildNumber'] ?? 'Unknown';
+
     if (!isConnected) {
-      // Show dialog for no internet connection
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -109,7 +138,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               emailaddress.text.trim(),
               password.text.trim(),
               modelName,
-              macAddress.toString());
+              buildNumber,
+              deviceType,
+              appVersion.toString());
 
           if (response['success'] == true) {
             LoggedInUser loggedInUser = LoggedInUser.fromJson(response['data']);
@@ -128,7 +159,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               MaterialPageRoute(builder: (context) => const UserScreen()),
             );
           } else {}
-        } catch (e) {}
+        } catch (e) {
+          log('loginerror:$e');
+        }
         if (mounted) {
           setState(() {
             loggingIn = false;
@@ -140,6 +173,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
   @override
   void initState() {
+    super.initState();
+    getVersion(); // Call getVersion() to initialize appVersion
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky,
         overlays: [SystemUiOverlay.bottom]);
     streamSubscription = ConnectionFuncs.checkInternetConnectivityStream()
@@ -150,8 +185,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         connection.add(isConnected);
       }
     });
-
-    super.initState();
   }
 
   @override

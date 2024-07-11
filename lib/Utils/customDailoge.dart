@@ -13,9 +13,10 @@ class ConstDialog {
     Color? iconColor,
     double? iconSize,
     String? iconText,
-    final Function()? ontap, // Make ontap optional
+    final Function()? ontap,
   }) {
     showDialog(
+      barrierDismissible: false,
       barrierColor: Colors.black87,
       context: context,
       builder: (BuildContext context) {
@@ -36,7 +37,8 @@ class ConstDialog {
             TextButton(
               onPressed: ontap ??
                   () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    Navigator.pop(context);
+                    // of(context).popUntil((route) => route.isFirst);
                   },
               child: const Text(
                 "OK",

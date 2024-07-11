@@ -23,7 +23,7 @@ class ConnectionFuncs {
 
   static Future<bool> _checkInternet() async {
     try {
-      final lookup = await InternetAddress.lookup('example.com');
+      final lookup = await InternetAddress.lookup('www.google.com');
       return lookup.isNotEmpty;
     } catch (e) {
       print('Error: $e');

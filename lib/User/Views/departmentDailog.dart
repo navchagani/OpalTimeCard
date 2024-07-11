@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -13,7 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class DepartmentCard extends StatefulWidget {
   final Employees employee;
 
-  DepartmentCard({required this.employee});
+  const DepartmentCard({super.key, required this.employee});
 
   @override
   State<DepartmentCard> createState() => _DepartmentCardState();
@@ -22,6 +23,7 @@ class DepartmentCard extends StatefulWidget {
 class _DepartmentCardState extends State<DepartmentCard> {
   TextEditingController locationController = TextEditingController();
   TextEditingController bussinessId = TextEditingController();
+  TextEditingController deviceId = TextEditingController();
   TextEditingController userId = TextEditingController();
   LoggedInUser? user;
   late SharedPreferences _prefs;
@@ -91,6 +93,7 @@ class _DepartmentCardState extends State<DepartmentCard> {
       setState(() {
         user = LoggedInUser.fromJson(jsonDecode(userJson));
         bussinessId.text = user!.businessId.toString();
+        deviceId.text = user!.deviceId.toString();
         userId.text = user!.uid.toString();
       });
     }
@@ -128,6 +131,13 @@ class _DepartmentCardState extends State<DepartmentCard> {
                       ),
                       textAlign: TextAlign.start,
                     ),
+                    IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(
+                          Icons.cancel,
+                          color: Colors.white,
+                          size: 28.0,
+                        ))
                   ],
                 ),
               ),
@@ -218,6 +228,7 @@ class _DepartmentCardState extends State<DepartmentCard> {
                           onPressed: selectedDepartment == null
                               ? null
                               : () async {
+                                  _getCurrentLocation();
                                   bool isConnected = await ConnectionFuncs
                                       .checkInternetConnectivity();
                                   String currentTime = DateFormat('HH:mm:ss')
@@ -227,23 +238,27 @@ class _DepartmentCardState extends State<DepartmentCard> {
 
                                   EmployeeAttendance attendanceRecord =
                                       EmployeeAttendance(
-                                    employeeId: widget.employee.id,
-                                    employeeName: widget.employee.name,
-                                    pin: widget.employee.pin,
-                                    time: currentTime,
-                                    date: currentDate,
-                                    uid: userId.text,
-                                    status: 'in',
-                                    businessId: bussinessId.text,
-                                    currentLocation: locationController.text,
-                                    departmentId: selectedDepartment!
-                                        .department!.id
-                                        .toString(),
-                                  );
+                                          employeeId: widget.employee.id,
+                                          employeeName: widget.employee.name,
+                                          pin: widget.employee.pin,
+                                          time: currentTime,
+                                          date: currentDate,
+                                          uid: userId.text,
+                                          status: 'in',
+                                          businessId: bussinessId.text,
+                                          currentLocation:
+                                              locationController.text,
+                                          departmentId: selectedDepartment!
+                                              .department!.id
+                                              .toString(),
+                                          deviceId: deviceId.text);
 
                                   int id = await DatabaseHelper.instance
                                       .insertAttendance(attendanceRecord);
                                   log('Attendance record inserted with ID: $id');
+                                  final player = AudioPlayer();
+                                  await player
+                                      .play(AssetSource('audios/in.mp3'));
                                   Navigator.pop(context);
                                   if (isConnected) {
                                     DatabaseHelper databaseHelper =
@@ -251,8 +266,6 @@ class _DepartmentCardState extends State<DepartmentCard> {
                                     await databaseHelper
                                         .postSingleDataToAPI(attendanceRecord);
                                   }
-                                  // Future.delayed(
-                                  //     Duration(milliseconds: 200), () async {});
                                 },
                           child: const Text(
                             "OK",

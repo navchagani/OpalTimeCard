@@ -1,11 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class LoggedInUser {
   final String? uid;
   final String? username;
   final String? email;
   final String? businessName;
   final String? businessId;
+  final int? deviceId;
   final List<Employees>? employees;
 
   const LoggedInUser({
@@ -14,6 +13,7 @@ class LoggedInUser {
     this.email,
     this.businessName,
     this.businessId,
+    this.deviceId,
     this.employees,
   });
 
@@ -23,6 +23,7 @@ class LoggedInUser {
     String? email,
     String? businessName,
     String? businessId,
+    int? deviceId,
     List<Employees>? employees,
   }) {
     return LoggedInUser(
@@ -31,6 +32,7 @@ class LoggedInUser {
       email: email ?? this.email,
       businessName: businessName ?? this.businessName,
       businessId: businessId ?? this.businessId,
+      deviceId: deviceId ?? this.deviceId,
       employees: employees ?? this.employees,
     );
   }
@@ -42,9 +44,8 @@ class LoggedInUser {
       'email': email,
       'business_name': businessName,
       'business_id': businessId,
-      'employees': employees
-          ?.map<Map<String, dynamic>>((data) => data.toJson())
-          .toList(),
+      'device_id': deviceId,
+      'employees': employees?.map((data) => data.toJson()).toList(),
     };
   }
 
@@ -55,16 +56,17 @@ class LoggedInUser {
       email: json['email'] as String?,
       businessName: json['business_name'] as String?,
       businessId: json['business_id'] as String?,
+      deviceId: json['device_id'] as int?,
       employees: (json['employees'] as List?)
           ?.map((data) => Employees.fromJson(data as Map<String, Object?>))
           .toList(),
     );
   }
 
-  factory LoggedInUser.fromFirestore(DocumentSnapshot doc) {
-    Map<String, Object?> json = doc.data() as Map<String, Object?>;
-    return LoggedInUser.fromJson(json);
-  }
+  // factory LoggedInUser.fromFirestore(DocumentSnapshot doc) {
+  //   Map<String, Object?> json = doc.data() as Map<String, Object?>;
+  //   return LoggedInUser.fromJson(json);
+  // }
 
   Map<String, Object?> toFirestore() {
     return toJson();
@@ -73,13 +75,14 @@ class LoggedInUser {
   @override
   String toString() {
     return '''LoggedInUser(
-      uid:$uid,
-      username:$username,
-      email:$email,
-      businessName:$businessName,
-      businessId:$businessId,
-      employees:${employees.toString()}
-    ) ''';
+      uid: $uid,
+      username: $username,
+      email: $email,
+      businessName: $businessName,
+      businessId: $businessId,
+      deviceId: $deviceId,
+      employees: ${employees.toString()}
+    )''';
   }
 
   @override
@@ -91,13 +94,14 @@ class LoggedInUser {
         other.email == email &&
         other.businessName == businessName &&
         other.businessId == businessId &&
+        other.deviceId == deviceId &&
         other.employees == employees;
   }
 
   @override
   int get hashCode {
-    return Object.hash(
-        runtimeType, uid, username, email, businessName, businessId, employees);
+    return Object.hash(runtimeType, uid, username, email, businessName,
+        businessId, deviceId, employees);
   }
 }
 
@@ -162,10 +166,10 @@ class Employees {
     );
   }
 
-  factory Employees.fromFirestore(DocumentSnapshot doc) {
-    Map<String, Object?> json = doc.data() as Map<String, Object?>;
-    return Employees.fromJson(json);
-  }
+  // factory Employees.fromFirestore(DocumentSnapshot doc) {
+  //   Map<String, Object?> json = doc.data() as Map<String, Object?>;
+  //   return Employees.fromJson(json);
+  // }
 
   Map<String, Object?> toFirestore() {
     return toJson();
@@ -223,10 +227,10 @@ class Alldepartment {
     );
   }
 
-  factory Alldepartment.fromFirestore(DocumentSnapshot doc) {
-    Map<String, Object?> json = doc.data() as Map<String, Object?>;
-    return Alldepartment.fromJson(json);
-  }
+  // factory Alldepartment.fromFirestore(DocumentSnapshot doc) {
+  //   Map<String, Object?> json = doc.data() as Map<String, Object?>;
+  //   return Alldepartment.fromJson(json);
+  // }
 
   Map<String, Object?> toFirestore() {
     return toJson();
@@ -273,10 +277,10 @@ class Department {
     );
   }
 
-  factory Department.fromFirestore(DocumentSnapshot doc) {
-    Map<String, Object?> json = doc.data() as Map<String, Object?>;
-    return Department.fromJson(json);
-  }
+  // factory Department.fromFirestore(DocumentSnapshot doc) {
+  //   Map<String, Object?> json = doc.data() as Map<String, Object?>;
+  //   return Department.fromJson(json);
+  // }
 
   Map<String, Object?> toFirestore() {
     return toJson();

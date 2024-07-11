@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, unnecessary_null_comparison
+// ignore_for_file: use_build_context_synchronously
 
 import 'dart:async';
 import 'dart:convert';
@@ -35,6 +35,7 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
 
   @override
   void initState() {
+    _getCurrentLocation();
     pinFocusNode.addListener(() {
       if (!pinFocusNode.hasFocus) {
         pinCode.clear();
@@ -74,7 +75,7 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
 
     // Update UI with the address
     setState(() {
-      if (placemarks != null && placemarks.isNotEmpty) {
+      if (placemarks.isNotEmpty) {
         Placemark placemark = placemarks[0];
         locationController.text =
             '${placemark.name}, ${placemark.subLocality}, ${placemark.locality} ${placemark.postalCode}, ${placemark.administrativeArea}, ${placemark.country}';
@@ -139,9 +140,6 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
       Employees matchedEmployee, LoggedInUser loggedInUser) async {
     EmployeeAttendance? lastAttendance =
         await DatabaseHelper.instance.getLastAttendance(matchedEmployee.pin!);
-    bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
-    String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
-    String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     if (lastAttendance != null && lastAttendance.status == 'in') {
       List<String> parts = lastAttendance.time!.split(":");
@@ -159,9 +157,6 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
       DateTime time1 = DateTime.now();
       Duration difference = time1.difference(dateTime);
 
-      // Future.delayed(Duration(milliseconds: 500), () async {
-
-      // });
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -335,13 +330,13 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
                                     ),
                                     ElevatedButton(
                                       style: ButtonStyle(
-                                        backgroundColor: MaterialStateProperty
+                                        backgroundColor: WidgetStateProperty
                                             .resolveWith<Color?>(
-                                          (Set<MaterialState> states) {
+                                          (Set<WidgetState> states) {
                                             return Colors.red;
                                           },
                                         ),
-                                        fixedSize: MaterialStateProperty.all(
+                                        fixedSize: WidgetStateProperty.all(
                                             const Size(150, 40)),
                                       ),
                                       onPressed: () {
@@ -381,37 +376,46 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
         },
       ).whenComplete(() async {
         _dismissTimer?.cancel();
+        bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
         String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
         String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
-        Future.delayed(const Duration(milliseconds: 100), () async {
-          EmployeeAttendance attendanceRecord = EmployeeAttendance(
-              employeeId: matchedEmployee.id,
-              employeeName: matchedEmployee.name,
-              pin: matchedEmployee.pin,
-              time: currentTime,
-              date: currentDate,
-              uid: loggedInUser.uid,
-              status: 'out',
-              businessId: loggedInUser.businessId,
-              currentLocation: locationController.text,
-              departmentId: lastAttendance.departmentId);
-          if (isConnected) {
-            DatabaseHelper databaseHelper = DatabaseHelper.instance;
-            await databaseHelper.postSingleDataToAPI(attendanceRecord);
-          } else {
-            return;
-          }
-        });
+        DatabaseHelper databaseHelper = DatabaseHelper.instance;
+        List<EmployeeAttendance> records =
+            await databaseHelper.getAllAttendanceRecord();
         await DatabaseHelper.instance.insertAttendance(
           lastAttendance.copyWith(
-              time: currentTime,
-              date: currentDate,
-              uid: loggedInUser.uid,
-              status: 'out',
-              businessId: loggedInUser.businessId,
-              currentLocation: locationController.text,
-              departmentId: lastAttendance.departmentId),
+            time: currentTime,
+            date: currentDate,
+            uid: loggedInUser.uid,
+            status: 'out',
+            businessId: loggedInUser.businessId,
+            currentLocation: locationController.text,
+            departmentId: lastAttendance.departmentId,
+            deviceId: loggedInUser.deviceId.toString(),
+          ),
         );
+        EmployeeAttendance attendanceRecord = EmployeeAttendance(
+          employeeId: matchedEmployee.id,
+          employeeName: matchedEmployee.name,
+          pin: matchedEmployee.pin,
+          time: currentTime,
+          date: currentDate,
+          uid: loggedInUser.uid,
+          status: 'out',
+          businessId: loggedInUser.businessId,
+          currentLocation: locationController.text,
+          deviceId: loggedInUser.deviceId.toString(),
+          departmentId: lastAttendance.departmentId,
+        );
+        if (isConnected) {
+          DatabaseHelper databaseHelper = DatabaseHelper.instance;
+          await databaseHelper.postSingleDataToAPI(attendanceRecord);
+          Future.delayed(const Duration(seconds: 2), () {
+            log('all records : $records');
+          });
+        } else {
+          return;
+        }
       });
       final player = AudioPlayer();
       await player.play(AssetSource('audios/out.mp3'));
@@ -508,16 +512,18 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
           String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
           String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
           EmployeeAttendance attendanceRecord = EmployeeAttendance(
-              employeeId: matchedEmployee.id,
-              employeeName: matchedEmployee.name,
-              pin: matchedEmployee.pin,
-              time: currentTime,
-              date: currentDate,
-              uid: loggedInUser.uid,
-              status: 'in',
-              businessId: loggedInUser.businessId,
-              currentLocation: locationController.text,
-              departmentId: departmentId.toString());
+            employeeId: matchedEmployee.id,
+            employeeName: matchedEmployee.name,
+            pin: matchedEmployee.pin,
+            time: currentTime,
+            date: currentDate,
+            uid: loggedInUser.uid,
+            status: 'in',
+            businessId: loggedInUser.businessId,
+            currentLocation: locationController.text,
+            departmentId: departmentId.toString(),
+            deviceId: loggedInUser.deviceId.toString(),
+          );
           int id =
               await DatabaseHelper.instance.insertAttendance(attendanceRecord);
           log('Attendance record inserted with ID: $id');

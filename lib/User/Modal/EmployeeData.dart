@@ -9,6 +9,7 @@ class EmployeeAttendance {
   final String? status;
   final String? currentLocation;
   final String? departmentId;
+  final String? deviceId;
 
   const EmployeeAttendance({
     this.businessId,
@@ -21,6 +22,7 @@ class EmployeeAttendance {
     this.status,
     this.currentLocation,
     this.departmentId,
+    this.deviceId,
   });
 
   EmployeeAttendance copyWith({
@@ -34,6 +36,7 @@ class EmployeeAttendance {
     String? status,
     String? currentLocation,
     String? departmentId,
+    String? deviceId,
   }) {
     return EmployeeAttendance(
       employeeId: employeeId ?? this.employeeId,
@@ -46,6 +49,7 @@ class EmployeeAttendance {
       status: status ?? this.status,
       currentLocation: currentLocation ?? this.currentLocation,
       departmentId: departmentId ?? this.departmentId,
+      deviceId: deviceId ?? this.deviceId,
     );
   }
 
@@ -61,6 +65,7 @@ class EmployeeAttendance {
       'status': status,
       'current_location': currentLocation,
       'department_id': departmentId,
+      'device_id': deviceId,
     };
   }
 
@@ -84,6 +89,7 @@ class EmployeeAttendance {
       departmentId: json['department_id'] == null
           ? null
           : json['department_id'] as String,
+      deviceId: json['device_id'] == null ? null : json['device_id'] as String,
     );
   }
 
@@ -100,6 +106,7 @@ class EmployeeAttendance {
       status: $status,
       currentLocation: $currentLocation,
       departmentId: $departmentId,
+      deviceId: $deviceId,
     )''';
   }
 
@@ -116,7 +123,8 @@ class EmployeeAttendance {
         other.uid == uid &&
         other.status == status &&
         other.currentLocation == currentLocation &&
-        other.departmentId == departmentId;
+        other.departmentId == departmentId &&
+        other.deviceId == deviceId;
   }
 
   @override
@@ -133,6 +141,7 @@ class EmployeeAttendance {
       status,
       currentLocation,
       departmentId,
+      deviceId,
     );
   }
 }

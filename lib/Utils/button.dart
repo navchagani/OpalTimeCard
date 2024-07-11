@@ -28,7 +28,7 @@ class CustomButton extends StatelessWidget {
       color: enabled ?? true
           ? isLoading ?? false
               ? null
-              : backgroundColor ?? Color.fromARGB(255, 37, 84, 124)
+              : backgroundColor ?? const Color.fromARGB(255, 37, 84, 124)
           : Colors.grey.shade800,
       clipBehavior: Clip.hardEdge,
       child: InkWell(

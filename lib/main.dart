@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
   final String? email;
   final String? password;
 
-  const MyApp({this.email, this.password});
+  const MyApp({super.key, this.email, this.password});
 
   @override
   Widget build(BuildContext context) {

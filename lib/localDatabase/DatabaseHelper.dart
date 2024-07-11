@@ -42,7 +42,8 @@ class DatabaseHelper {
         uid TEXT,
         status TEXT,
         current_location TEXT,
-        department_id TEXT
+        department_id TEXT,
+        device_id TEXT
       )
     ''');
   }
@@ -61,6 +62,11 @@ class DatabaseHelper {
     if (oldVersion < 4) {
       await db.execute('''
         ALTER TABLE attendance ADD COLUMN department_id TEXT
+      ''');
+    }
+    if (oldVersion < 5) {
+      await db.execute('''
+        ALTER TABLE attendance ADD COLUMN device_id TEXT
       ''');
     }
   }
@@ -120,7 +126,8 @@ class DatabaseHelper {
           'status': data.status,
           'uid': data.uid,
           'current_location': data.currentLocation,
-          'department_id': data.departmentId
+          'department_id': data.departmentId,
+          'device_id': data.deviceId,
         });
 
         if (response.statusCode == 200) {
@@ -147,12 +154,14 @@ class DatabaseHelper {
         'status': data.status,
         'uid': data.uid,
         'current_location': data.currentLocation,
-        'department_id': data.departmentId
+        'department_id': data.departmentId,
+        'device_id': data.deviceId,
       });
       if (response.statusCode == 200) {
         log('Data posted successfully: ${data.toString()} ${response.body}');
         var responseBody = jsonDecode(response.body);
-        if (responseBody['success'] == "true") {
+        if (responseBody['success'] == "true" &&
+            responseBody['success'] == 'You are already ') {
           Database db = await instance.database;
 
           if (data.status == "out") {

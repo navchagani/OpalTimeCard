@@ -6,13 +6,21 @@ import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/Utils/customDailoge.dart';
 
 class AuthService {
-  Future<Map<String, dynamic>> loginUser(BuildContext context, String email,
-      String password, String modelName, String macAddress) async {
+  Future<Map<String, dynamic>> loginUser(
+      BuildContext context,
+      String email,
+      String password,
+      String modelName,
+      String macAddress,
+      String deviceType,
+      String appVersion) async {
     final body = {
       'email': email,
       'password': password,
       'model_name': modelName,
-      'mac_address': macAddress
+      'mac_address': macAddress,
+      'device_type': deviceType,
+      'app_version': appVersion
     };
 
     try {
@@ -20,9 +28,11 @@ class AuthService {
         Uri.parse('https://opaltimecard.com/api/login'),
         body: body,
       );
+      log("body:$body");
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseBody = json.decode(response.body);
+        // log("body:${response.body}");
 
         if (responseBody['success']) {
           LoggedInUser loggedInUser =
@@ -35,6 +45,7 @@ class AuthService {
               ? responseBody['data']['info']
               : 'Unknown error';
           ConstDialog(context).showErrorDialog(error: errorMessage);
+
           return {'success': false, 'error': errorMessage};
         }
       } else {
@@ -48,6 +59,8 @@ class AuthService {
       }
     } catch (e) {
       // ConstDialog(context).showErrorDialog(error: 'Network error: $e');
+      log('loginerror:$e');
+
       return {'success': false, 'error': 'Network error: $e'};
     }
   }
