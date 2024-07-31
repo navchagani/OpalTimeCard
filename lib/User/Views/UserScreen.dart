@@ -129,6 +129,9 @@ class _UserScreenState extends State<UserScreen> {
 
   void handleAttendance(
       Employees matchedEmployee, LoggedInUser loggedInUser) async {
+    DatabaseHelper databaseHelper = DatabaseHelper.instance;
+    List<EmployeeAttendance> records =
+        await databaseHelper.getAllAttendanceRecord();
     EmployeeAttendance? lastAttendance =
         await DatabaseHelper.instance.getLastAttendance(matchedEmployee.pin!);
     if (lastAttendance != null && lastAttendance.status == 'in') {
@@ -369,6 +372,7 @@ class _UserScreenState extends State<UserScreen> {
       ).whenComplete(() async {
         String currentTime = DateFormat('HH:mm').format(DateTime.now());
         String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
         Future.delayed(const Duration(milliseconds: 100), () async {
           EmployeeAttendance attendanceRecord = EmployeeAttendance(
             employeeId: matchedEmployee.id,
@@ -384,8 +388,15 @@ class _UserScreenState extends State<UserScreen> {
             deviceId: loggedInUser.deviceId.toString(),
           );
           if (isConnected) {
-            DatabaseHelper databaseHelper = DatabaseHelper.instance;
-            await databaseHelper.postSingleDataToAPI(attendanceRecord);
+            await databaseHelper.postDataToAPI(records).whenComplete(() async {
+              await Future.delayed(const Duration(milliseconds: 200));
+              await databaseHelper.postSingleDataToAPI(attendanceRecord);
+              deletePairwiseRecords();
+            });
+
+            Future.delayed(const Duration(seconds: 2), () {
+              log('all records : $records');
+            });
           } else {
             return;
           }
@@ -517,8 +528,11 @@ class _UserScreenState extends State<UserScreen> {
               await DatabaseHelper.instance.insertAttendance(attendanceRecord);
           log('Attendance record inserted with ID: $id');
           if (isConnected) {
-            DatabaseHelper databaseHelper = DatabaseHelper.instance;
-            await databaseHelper.postSingleDataToAPI(attendanceRecord);
+            await databaseHelper.postDataToAPI(records).whenComplete(() async {
+              await Future.delayed(const Duration(milliseconds: 200));
+              await databaseHelper.postSingleDataToAPI(attendanceRecord);
+              deletePairwiseRecords();
+            });
           } else {
             return;
           }
@@ -765,7 +779,7 @@ class _UserScreenState extends State<UserScreen> {
         child: QRView(
           key: qrKey,
           onQRViewCreated: _onQRViewCreated,
-          cameraFacing: CameraFacing.back,
+          cameraFacing: CameraFacing.front,
           overlay: QrScannerOverlayShape(
             borderColor: Colors.red,
             borderRadius: 10,
@@ -803,23 +817,6 @@ class _UserScreenState extends State<UserScreen> {
             child: toggle ? const EmployeeScreen() : qrCodeDailog(),
           ),
           const SizedBox(height: 50),
-          ElevatedButton(
-            style: ButtonStyle(
-              fixedSize: WidgetStateProperty.all(const Size(200, 60)),
-            ),
-            onPressed: () {
-              setState(() {
-                toggle = !toggle;
-              });
-            },
-            child: Text(
-              toggle ? 'Switch to QR ' : 'Switch to Pin',
-              style: const TextStyle(
-                  color: Color.fromRGBO(30, 60, 87, 1),
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold),
-            ),
-          ),
         ],
       );
     }
@@ -833,72 +830,169 @@ class _UserScreenState extends State<UserScreen> {
     double height = MediaQuery.of(context).size.height;
     double width = MediaQuery.of(context).size.width;
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 29, 29, 29),
-      body: Center(
-        child: SingleChildScrollView(
-          child: Column(
+        backgroundColor: const Color.fromARGB(255, 29, 29, 29),
+        body: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (width > 900)
+                        Expanded(
+                          child: Text(
+                            textAlign: TextAlign.start,
+                            date,
+                            style: TextStyle(
+                                fontSize: width > 600 ? 30 : 20,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white),
+                          ),
+                        ),
+                      if (width > 900)
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.topCenter,
+                            child: Center(
+                              child: Image(
+                                image: const AssetImage(
+                                    "assets/images/purple.png"),
+                                height: width < 700 ? 140 : 175,
+                                width: 400,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (width > 900)
+                        Expanded(
+                          child: Text(
+                            textAlign: TextAlign.end,
+                            time,
+                            style: TextStyle(
+                                fontSize: width > 600 ? 30 : 20,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (width < 900)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image(
+                        image: const AssetImage("assets/images/purple.png"),
+                        height: width < 700 ? 140 : 175,
+                        width: width < 700 ? 200 : 400,
+                      ),
+                    ],
+                  ),
+                if (width < 900)
+                  Text(
+                    time,
+                    style: TextStyle(
+                        fontSize: width < 700 ? 30 : 50,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white),
+                  ),
+                if (width < 900)
+                  Text(
+                    date,
+                    style: TextStyle(
+                        fontSize: width > 600 ? 30 : 20, color: Colors.white),
+                  ),
+                SizedBox(height: height > 768 ? height / 50 : height / 30),
+                userAttendance(),
+              ],
+            ),
+          ),
+        ),
+        bottomNavigationBar: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                UserLocation,
-                style: TextStyle(
-                  fontSize: width > 600 ? 30 : 20,
-                  color: const Color.fromARGB(255, 177, 149, 226),
-                  fontWeight: FontWeight.w900,
+              if (width < 900)
+                IconButton(
+                  icon: Container(
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10)),
+                    height: 50,
+                    width: 50,
+                    child: Icon(
+                      toggle
+                          ? Icons.qr_code_scanner_rounded
+                          : Icons.password_rounded,
+                      color: Colors.black,
+                    ),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      toggle = !toggle;
+                    });
+                  },
+                ),
+              Expanded(
+                child: Text(
+                  UserLocation.toUpperCase(),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: width > 600 ? 30 : 20,
+                    color: const Color.fromARGB(255, 52, 126, 190),
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
-              Text(
-                time,
-                style: const TextStyle(
-                    fontSize: 50,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white),
+              BlocBuilder<CheckConnection, bool>(
+                builder: (context, isConnected) {
+                  return IconButton(
+                    onPressed: () {
+                      log('status:$isConnected');
+                      if (isConnected) {
+                        showDialog(
+                          context: context,
+                          builder: (context) =>
+                              LogoutDailog(email: emailController.text),
+                        );
+                      } else {
+                        ConstDialog(context).showErrorDialog(
+                          error: "Check Your Internet Connection",
+                          title: const Row(
+                            children: [
+                              Icon(Icons.error, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text("Alert"),
+                            ],
+                          ),
+                          iconColor: Colors.red,
+                        );
+                      }
+                    },
+                    icon: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.power_settings_new_rounded,
+                          color: Colors.deepOrange),
+                    ),
+                  );
+                },
               ),
-              Text(
-                date,
-                style: TextStyle(
-                    fontSize: width > 600 ? 30 : 20, color: Colors.white),
-              ),
-              SizedBox(height: height > 768 ? height / 20 : height / 30),
-              userAttendance(),
             ],
           ),
-        ),
-      ),
-      floatingActionButton: BlocBuilder<CheckConnection, bool>(
-        builder: (context, isConnected) {
-          return FloatingActionButton(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
-            onPressed: () {
-              log('status:$isConnected');
-              if (isConnected) {
-                showDialog(
-                  context: context,
-                  builder: (context) =>
-                      LogoutDailog(email: emailController.text),
-                );
-              } else {
-                ConstDialog(context).showErrorDialog(
-                  error: "Check Your Internet Connection",
-                  title: const Row(
-                    children: [
-                      Icon(Icons.error, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text("Alert"),
-                    ],
-                  ),
-                  iconColor: Colors.red,
-                );
-              }
-            },
-            child: const Icon(Icons.power_settings_new_rounded,
-                color: Colors.deepOrange),
-          );
-        },
-      ),
-    );
+        ));
   }
 
   Future<void> postAllRecordsToAPI(BuildContext context) async {

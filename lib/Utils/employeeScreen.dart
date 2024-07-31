@@ -140,6 +140,9 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
       Employees matchedEmployee, LoggedInUser loggedInUser) async {
     EmployeeAttendance? lastAttendance =
         await DatabaseHelper.instance.getLastAttendance(matchedEmployee.pin!);
+    DatabaseHelper databaseHelper = DatabaseHelper.instance;
+    List<EmployeeAttendance> records =
+        await databaseHelper.getAllAttendanceRecord();
 
     if (lastAttendance != null && lastAttendance.status == 'in') {
       List<String> parts = lastAttendance.time!.split(":");
@@ -379,11 +382,12 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
         bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
         String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
         String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
-        DatabaseHelper databaseHelper = DatabaseHelper.instance;
-        List<EmployeeAttendance> records =
-            await databaseHelper.getAllAttendanceRecord();
+
         await DatabaseHelper.instance.insertAttendance(
           lastAttendance.copyWith(
+            employeeId: matchedEmployee.id,
+            employeeName: matchedEmployee.name,
+            pin: matchedEmployee.pin,
             time: currentTime,
             date: currentDate,
             uid: loggedInUser.uid,
@@ -408,8 +412,12 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
           departmentId: lastAttendance.departmentId,
         );
         if (isConnected) {
-          DatabaseHelper databaseHelper = DatabaseHelper.instance;
-          await databaseHelper.postSingleDataToAPI(attendanceRecord);
+          await databaseHelper.postDataToAPI(records).whenComplete(() async {
+            await Future.delayed(const Duration(milliseconds: 200));
+            await databaseHelper.postSingleDataToAPI(attendanceRecord);
+            deletePairwiseRecords();
+          });
+
           Future.delayed(const Duration(seconds: 2), () {
             log('all records : $records');
           });
@@ -528,8 +536,15 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
               await DatabaseHelper.instance.insertAttendance(attendanceRecord);
           log('Attendance record inserted with ID: $id');
           if (isConnected) {
-            DatabaseHelper databaseHelper = DatabaseHelper.instance;
-            await databaseHelper.postSingleDataToAPI(attendanceRecord);
+            await databaseHelper.postDataToAPI(records).whenComplete(() async {
+              await Future.delayed(const Duration(milliseconds: 200));
+              // await databaseHelper.postSingleDataToAPI(attendanceRecord);
+              deletePairwiseRecords();
+            });
+
+            Future.delayed(const Duration(seconds: 2), () {
+              log('all records : $records');
+            });
           } else {
             return;
           }
@@ -541,6 +556,32 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
         Future.delayed(const Duration(seconds: 5), () {
           Navigator.of(context, rootNavigator: true).pop();
         });
+      }
+    }
+  }
+
+  void deletePairwiseRecords() async {
+    DatabaseHelper databaseHelper = DatabaseHelper.instance;
+    List<EmployeeAttendance> records =
+        await databaseHelper.getAllAttendanceRecord();
+    Map<int, EmployeeAttendance> inRecords = {};
+    for (var record in records) {
+      if (record.status == "in") {
+        inRecords[int.parse(record.employeeId.toString())] = record;
+      } else if (record.status == "out") {
+        if (inRecords.containsKey(record.employeeId)) {
+          EmployeeAttendance inRecord = inRecords[record.employeeId]!;
+          try {
+            await databaseHelper.deleteAttendance(inRecord.employeeId!);
+            await databaseHelper.deleteAttendance(record.employeeId!);
+            inRecords.remove(record.employeeId);
+          } catch (e) {
+            log('Error deleting data: $e');
+            continue;
+          }
+        } else {
+          log('No matching "in" record found for "out" record: $record');
+        }
       }
     }
   }
@@ -666,7 +707,11 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
     double height = MediaQuery.of(context).size.height;
 
     return SizedBox(
-      height: height > 800 ? height / 1.85 : height / 1.55,
+      height: height > 800
+          ? height / 1.85
+          : width < 700
+              ? 400
+              : height / 1.55,
       width: width > 900 ? width / 3.85 : width / 1.5,
       child: Material(
         clipBehavior: Clip.hardEdge,

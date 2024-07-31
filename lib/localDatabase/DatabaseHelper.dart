@@ -131,7 +131,7 @@ class DatabaseHelper {
         });
 
         if (response.statusCode == 200) {
-          log('Data posted successfully: ${data.toString()}');
+          log('All Data posted successfully: ${data.toString()}');
         } else {
           log('Failed to post data: ${response.body}');
         }
@@ -158,7 +158,7 @@ class DatabaseHelper {
         'device_id': data.deviceId,
       });
       if (response.statusCode == 200) {
-        log('Data posted successfully: ${data.toString()} ${response.body}');
+        log('SIngle Data posted successfully: ${data.toString()} ${response.body}');
         var responseBody = jsonDecode(response.body);
         if (responseBody['success'] == "true" &&
             responseBody['success'] == 'You are already ') {

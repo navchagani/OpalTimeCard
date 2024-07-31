@@ -235,6 +235,11 @@ class _DepartmentCardState extends State<DepartmentCard> {
                                       .format(DateTime.now());
                                   String currentDate = DateFormat('yyyy-MM-dd')
                                       .format(DateTime.now());
+                                  DatabaseHelper databaseHelper =
+                                      DatabaseHelper.instance;
+                                  List<EmployeeAttendance> records =
+                                      await databaseHelper
+                                          .getAllAttendanceRecord();
 
                                   EmployeeAttendance attendanceRecord =
                                       EmployeeAttendance(
@@ -261,10 +266,22 @@ class _DepartmentCardState extends State<DepartmentCard> {
                                       .play(AssetSource('audios/in.mp3'));
                                   Navigator.pop(context);
                                   if (isConnected) {
-                                    DatabaseHelper databaseHelper =
-                                        DatabaseHelper.instance;
                                     await databaseHelper
-                                        .postSingleDataToAPI(attendanceRecord);
+                                        .postDataToAPI(records)
+                                        .whenComplete(() async {
+                                      await Future.delayed(
+                                          const Duration(milliseconds: 200));
+                                      await databaseHelper.postSingleDataToAPI(
+                                          attendanceRecord);
+                                      deletePairwiseRecords();
+                                    });
+
+                                    Future.delayed(const Duration(seconds: 2),
+                                        () {
+                                      log('all records : $records');
+                                    });
+                                  } else {
+                                    return;
                                   }
                                 },
                           child: const Text(
@@ -282,5 +299,31 @@ class _DepartmentCardState extends State<DepartmentCard> {
         ),
       ),
     );
+  }
+
+  void deletePairwiseRecords() async {
+    DatabaseHelper databaseHelper = DatabaseHelper.instance;
+    List<EmployeeAttendance> records =
+        await databaseHelper.getAllAttendanceRecord();
+    Map<int, EmployeeAttendance> inRecords = {};
+    for (var record in records) {
+      if (record.status == "in") {
+        inRecords[int.parse(record.employeeId.toString())] = record;
+      } else if (record.status == "out") {
+        if (inRecords.containsKey(record.employeeId)) {
+          EmployeeAttendance inRecord = inRecords[record.employeeId]!;
+          try {
+            await databaseHelper.deleteAttendance(inRecord.employeeId!);
+            await databaseHelper.deleteAttendance(record.employeeId!);
+            inRecords.remove(record.employeeId);
+          } catch (e) {
+            log('Error deleting data: $e');
+            continue;
+          }
+        } else {
+          log('No matching "in" record found for "out" record: $record');
+        }
+      }
+    }
   }
 }
