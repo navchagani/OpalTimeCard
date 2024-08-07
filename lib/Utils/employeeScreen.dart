@@ -3,17 +3,24 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
+import 'package:opaltimecard/Admin/Services/loginService.dart';
 import 'package:opaltimecard/User/Modal/EmployeeData.dart';
 import 'package:opaltimecard/User/Views/departmentDailog.dart';
+import 'package:opaltimecard/bloc/Blocs.dart';
 import 'package:opaltimecard/connectivity.dart';
 import 'package:opaltimecard/localDatabase/DatabaseHelper.dart';
+import 'package:opaltimecard/localDatabase/localDatabase.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pinput/pinput.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,9 +39,29 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
   Timer? _dismissTimer;
   String text = '';
   FocusNode pinFocusNode = FocusNode();
+  bool loggingIn = false;
+  late SharedPreferences _prefs;
+
+  final AuthService _authService = AuthService();
+  String? modelName;
+  String? buildNumber;
+  String deviceType = Platform.isAndroid ? 'Android' : 'iOS';
+  String? appVersion;
+  String? ipAddress;
+  String? deviceMACAddress;
+  late StreamSubscription<bool> streamSubscription;
 
   @override
   void initState() {
+    getVersion();
+    streamSubscription = ConnectionFuncs.checkInternetConnectivityStream()
+        .asBroadcastStream()
+        .listen((isConnected) {
+      if (mounted) {
+        CheckConnection connection = BlocProvider.of<CheckConnection>(context);
+        connection.add(isConnected);
+      }
+    });
     _getCurrentLocation();
     pinFocusNode.addListener(() {
       if (!pinFocusNode.hasFocus) {
@@ -43,6 +70,38 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
       }
     });
     super.initState();
+  }
+
+  Future<void> getVersion() async {
+    PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    appVersion = '${packageInfo.version}.${packageInfo.buildNumber}';
+    log('buildnumber ${packageInfo.buildNumber}');
+  }
+
+  Future<Map<String, String>> getDeviceInfo() async {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    String? androidId = androidInfo.fingerprint;
+
+    List<String> parts = androidId.split('/');
+
+    if (parts.length >= 2) {
+      String secondLastSegment =
+          parts[parts.length - 2]; // This will be "TP1A.220624.014"
+      List<String> secondLastParts = secondLastSegment.split(':');
+      if (secondLastParts.length >= 2) {
+        buildNumber = secondLastParts.first; // This will be "TP1A.220624.014"
+      } else {
+        print("Second last segment does not contain a colon.");
+      }
+    } else {
+      print("String does not have enough parts.");
+    }
+
+    return {
+      'modelName': androidInfo.model,
+      'buildNumber': buildNumber.toString(),
+    };
   }
 
   Future<void> _getCurrentLocation() async {
@@ -103,7 +162,44 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
     });
   }
 
+  Future<void> loadEmployees() async {
+    await LocalDatabaseInit.initialize();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _prefs = prefs; // Assign the instance to _prefs
+    String? email = prefs.getString('email');
+    String? password = prefs.getString('password');
+    log('email: $email');
+    log('pass:$password');
+    Map<String, String> deviceInfo = await getDeviceInfo();
+    String modelName = deviceInfo['modelName'] ?? 'Unknown';
+    String buildNumber = deviceInfo['buildNumber'] ?? 'Unknown';
+
+    try {
+      final Map<String, dynamic> response = await _authService.loginUser(
+          context,
+          email!.trim(),
+          password!.trim(),
+          modelName,
+          buildNumber,
+          deviceType,
+          appVersion.toString());
+
+      if (response['success'] == true) {
+        LoggedInUser loggedInUser = LoggedInUser.fromJson(response['data']);
+        UserBloc userBloc = BlocProvider.of<UserBloc>(context);
+        userBloc.add(loggedInUser);
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String userJson = jsonEncode(loggedInUser.toJson());
+        prefs.setString('loggedInUser', userJson);
+      } else {}
+    } catch (e) {
+      log('loginerror:$e');
+    }
+  }
+
   void employeeAttendance({required BuildContext context}) async {
+    bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? userJson = prefs.getString('loggedInUser');
 
@@ -112,28 +208,77 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
       LoggedInUser loggedInUser = LoggedInUser.fromJson(userMap);
       List<Employees>? employees = loggedInUser.employees;
 
-      bool pinMatch =
-          employees!.any((employee) => employee.pin == pinCode.text);
-      if (pinMatch) {
-        Employees? matchedEmployee = employees.firstWhere(
-          (employee) => employee.pin == pinCode.text,
-          orElse: () {
-            return const Employees();
-          },
-        );
+      if (employees != null) {
+        bool pinMatch =
+            employees.any((employee) => employee.pin == pinCode.text);
+        if (pinMatch) {
+          Employees? matchedEmployee = employees.firstWhere(
+            (employee) => employee.pin == pinCode.text,
+            orElse: () => const Employees(),
+          );
 
-        handleAttendance(matchedEmployee, loggedInUser);
+          // Ensure you handle the case where matchedEmployee might still be default
+          if (matchedEmployee.pin != null) {
+            handleAttendance(matchedEmployee, loggedInUser);
+            log('Matched Employee: ${matchedEmployee.toJson()}');
+          } else {
+            log('No valid employee matched');
+            final player = AudioPlayer();
+            await player.play(AssetSource('audios/pleasetryagain.mp3'));
+            _showerrorDailog(context);
+          }
+        } else if (!pinMatch) {
+          if (isConnected) {
+            await loadEmployees();
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            String? updatedUserJson = prefs.getString('loggedInUser');
+            if (updatedUserJson != null) {
+              Map<String, dynamic> updatedUserMap = jsonDecode(updatedUserJson);
+              LoggedInUser updatedLoggedInUser =
+                  LoggedInUser.fromJson(updatedUserMap);
+              List<Employees>? updatedEmployees = updatedLoggedInUser.employees;
+
+              if (updatedEmployees != null) {
+                Employees? matchedEmployee = updatedEmployees.firstWhere(
+                  (employee) => employee.pin == pinCode.text,
+                  orElse: () => const Employees(),
+                );
+
+                if (matchedEmployee.pin != null) {
+                  handleAttendance(matchedEmployee, updatedLoggedInUser);
+                  log('Updated Matched Employee: ${matchedEmployee.toJson()}');
+                } else {
+                  log('No valid employee matched after update');
+                  final player = AudioPlayer();
+                  await player.play(AssetSource('audios/pleasetryagain.mp3'));
+                  _showerrorDailog(context);
+                }
+              }
+            }
+          } else {
+            final player = AudioPlayer();
+            await player.play(AssetSource('audios/pleasetryagain.mp3'));
+            _showerrorDailog(context);
+          }
+        }
       } else {
         final player = AudioPlayer();
         await player.play(AssetSource('audios/pleasetryagain.mp3'));
         _showerrorDailog(context);
       }
+    } else {
+      final player = AudioPlayer();
+      await player.play(AssetSource('audios/pleasetryagain.mp3'));
+      _showerrorDailog(context);
     }
 
-    setState(() {
-      pinCode.clear();
-      text = '';
-    });
+    // Ensure state is updated only if the widget is still mounted
+    if (mounted) {
+      setState(() {
+        pinCode.clear();
+        text = '';
+      });
+    }
   }
 
   void handleAttendance(

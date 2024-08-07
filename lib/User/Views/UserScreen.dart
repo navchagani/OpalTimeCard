@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,13 +13,17 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
+import 'package:opaltimecard/Admin/Services/loginService.dart';
 import 'package:opaltimecard/User/Modal/EmployeeData.dart';
 import 'package:opaltimecard/User/Views/departmentDailog.dart';
 import 'package:opaltimecard/User/Views/logoutDailog.dart';
 import 'package:opaltimecard/Utils/customDailoge.dart';
 import 'package:opaltimecard/Utils/employeeScreen.dart';
+import 'package:opaltimecard/bloc/Blocs.dart';
 import 'package:opaltimecard/connectivity.dart';
 import 'package:opaltimecard/localDatabase/DatabaseHelper.dart';
+import 'package:opaltimecard/localDatabase/localDatabase.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -50,6 +55,12 @@ class _UserScreenState extends State<UserScreen> {
   String? modelName;
   String? deviceMACAddress;
   Timer? _dismissTimer;
+
+  final AuthService _authService = AuthService();
+  String? buildNumber;
+  String deviceType = Platform.isAndroid ? 'Android' : 'iOS';
+  String? appVersion;
+  String? ipAddress;
 
   @override
   void reassemble() {
@@ -100,7 +111,76 @@ class _UserScreenState extends State<UserScreen> {
     });
   }
 
+  Future<void> getVersion() async {
+    PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    appVersion = '${packageInfo.version}.${packageInfo.buildNumber}';
+    log('buildnumber ${packageInfo.buildNumber}');
+  }
+
+  Future<Map<String, String>> getDeviceInfo() async {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    String? androidId = androidInfo.fingerprint;
+
+    List<String> parts = androidId.split('/');
+
+    if (parts.length >= 2) {
+      String secondLastSegment =
+          parts[parts.length - 2]; // This will be "TP1A.220624.014"
+      List<String> secondLastParts = secondLastSegment.split(':');
+      if (secondLastParts.length >= 2) {
+        buildNumber = secondLastParts.first; // This will be "TP1A.220624.014"
+      } else {
+        print("Second last segment does not contain a colon.");
+      }
+    } else {
+      print("String does not have enough parts.");
+    }
+
+    return {
+      'modelName': androidInfo.model,
+      'buildNumber': buildNumber.toString(),
+    };
+  }
+
+  Future<void> loadEmployees() async {
+    await LocalDatabaseInit.initialize();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _prefs = prefs; // Assign the instance to _prefs
+    String? email = prefs.getString('email');
+    String? password = prefs.getString('password');
+    log('email: $email');
+    log('pass:$password');
+    Map<String, String> deviceInfo = await getDeviceInfo();
+    String modelName = deviceInfo['modelName'] ?? 'Unknown';
+    String buildNumber = deviceInfo['buildNumber'] ?? 'Unknown';
+
+    try {
+      final Map<String, dynamic> response = await _authService.loginUser(
+          context,
+          email!.trim(),
+          password!.trim(),
+          modelName,
+          buildNumber,
+          deviceType,
+          appVersion.toString());
+
+      if (response['success'] == true) {
+        LoggedInUser loggedInUser = LoggedInUser.fromJson(response['data']);
+        UserBloc userBloc = BlocProvider.of<UserBloc>(context);
+        userBloc.add(loggedInUser);
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String userJson = jsonEncode(loggedInUser.toJson());
+        prefs.setString('loggedInUser', userJson);
+      } else {}
+    } catch (e) {
+      log('loginerror:$e');
+    }
+  }
+
   void processAttendance() async {
+    bool isConnected = await ConnectionFuncs.checkInternetConnectivity();
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? userJson = prefs.getString('loggedInUser');
     if (userJson != null) {
@@ -119,6 +199,48 @@ class _UserScreenState extends State<UserScreen> {
           },
         );
         handleAttendance(matchedEmployee, loggedInUser);
+        if (matchedEmployee.pin != null) {
+          handleAttendance(matchedEmployee, loggedInUser);
+          log('Matched Employee: ${matchedEmployee.toJson()}');
+        } else {
+          log('No valid employee matched');
+          final player = AudioPlayer();
+          await player.play(AssetSource('audios/pleasetryagain.mp3'));
+          _showerrorDailog(context);
+        }
+      } else if (!pinMatch) {
+        if (isConnected) {
+          await loadEmployees();
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          String? updatedUserJson = prefs.getString('loggedInUser');
+          if (updatedUserJson != null) {
+            Map<String, dynamic> updatedUserMap = jsonDecode(updatedUserJson);
+            LoggedInUser updatedLoggedInUser =
+                LoggedInUser.fromJson(updatedUserMap);
+            List<Employees>? updatedEmployees = updatedLoggedInUser.employees;
+
+            if (updatedEmployees != null) {
+              Employees? matchedEmployee = updatedEmployees.firstWhere(
+                (employee) => employee.pin == result!.code,
+                orElse: () => const Employees(),
+              );
+
+              if (matchedEmployee.pin != null) {
+                handleAttendance(matchedEmployee, updatedLoggedInUser);
+                log('Updated Matched Employee: ${matchedEmployee.toJson()}');
+              } else {
+                log('No valid employee matched after update');
+                final player = AudioPlayer();
+                await player.play(AssetSource('audios/pleasetryagain.mp3'));
+                _showerrorDailog(context);
+              }
+            }
+          }
+        } else {
+          final player = AudioPlayer();
+          await player.play(AssetSource('audios/pleasetryagain.mp3'));
+          _showerrorDailog(context);
+        }
       } else {
         final player = AudioPlayer();
         await player.play(AssetSource('audios/pleasetryagain.mp3'));

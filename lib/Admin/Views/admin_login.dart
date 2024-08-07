@@ -8,9 +8,9 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:network_info_plus/network_info_plus.dart';
 import 'package:opaltimecard/Admin/Modal/loggedInUsermodel.dart';
 import 'package:opaltimecard/Admin/Services/loginService.dart';
+import 'package:opaltimecard/Admin/Views/resetScreen.dart';
 import 'package:opaltimecard/User/Views/UserScreen.dart';
 import 'package:opaltimecard/Utils/button.dart';
 import 'package:opaltimecard/Utils/customDailoge.dart';
@@ -41,17 +41,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   late StreamSubscription<bool> streamSubscription;
   TextEditingController emailaddress = TextEditingController();
   TextEditingController password = TextEditingController();
-
-  Future<String?> getMacAddress() async {
-    try {
-      final networkInfo = NetworkInfo();
-      String? wifiBSSID = await networkInfo.getWifiBSSID();
-      return wifiBSSID;
-    } catch (e) {
-      log("Error getting WiFi BSSID: $e");
-      return null;
-    }
-  }
 
   Future<void> getVersion() async {
     PackageInfo packageInfo = await PackageInfo.fromPlatform();
@@ -241,7 +230,18 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: InkWell(
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const ResetPasswordScreen())),
+                  child: const Text('Forget Password?'),
+                ),
+              ),
+              const SizedBox(height: 25),
               loginButton(),
             ],
           ),
@@ -335,25 +335,14 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
   Widget loginButton() {
     return BlocBuilder<CheckConnection, bool>(builder: (context, isConnected) {
-      if (emailaddress.text.isEmpty || password.text.isEmpty) {
-        return CustomButton(
-            text: "Login",
-            isLoading: false,
-            backgroundColor: const Color.fromARGB(255, 37, 84, 124),
-            textColor: Colors.white,
-            onTap: () {
-              loginUser(context: context, isConnected: isConnected);
-            });
-      } else {
-        return CustomButton(
-            text: "Login",
-            isLoading: loggingIn,
-            backgroundColor: const Color.fromARGB(255, 37, 84, 124),
-            textColor: Colors.white,
-            onTap: () {
-              loginUser(context: context, isConnected: isConnected);
-            });
-      }
+      return CustomButton(
+          text: "Login",
+          isLoading: false,
+          backgroundColor: const Color.fromARGB(255, 37, 84, 124),
+          textColor: Colors.white,
+          onTap: () {
+            loginUser(context: context, isConnected: isConnected);
+          });
     });
   }
 }

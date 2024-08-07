@@ -114,7 +114,8 @@ class DatabaseHelper {
 
   Future<void> postDataToAPI(List<EmployeeAttendance> dataList) async {
     try {
-      var url = Uri.parse('https://opaltimecard.com/api/markofflineattandence');
+      var url = Uri.parse(
+          'https://opaltimecard.com/api/markofflineattandence');
 
       for (var data in dataList) {
         var response = await http.post(url, body: {
@@ -143,7 +144,8 @@ class DatabaseHelper {
 
   Future<void> postSingleDataToAPI(EmployeeAttendance data) async {
     try {
-      var url = Uri.parse('https://opaltimecard.com/api/markofflineattandence');
+      var url = Uri.parse(
+          'https://opaltimecard.com/api/markofflineattandence');
 
       var response = await http.post(url, body: {
         'pin': data.pin,
