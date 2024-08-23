@@ -6,9 +6,11 @@ import 'package:opaltimecard/bloc/Blocs.dart';
 import 'package:opaltimecard/connectivity.dart';
 import 'package:opaltimecard/localDatabase/localDatabase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  WakelockPlus.enable();
 
   await LocalDatabaseInit.initialize();
   SharedPreferences prefs = await SharedPreferences.getInstance();
